@@ -1,12 +1,11 @@
-use grammers_client::{Client, Config};
-use grammers_tl_types as tl;
-use simple_logger::SimpleLogger;
-use tokio::task;
-use grammers_session::FileSession;
 use grammers_client::types::Chat;
+use grammers_client::{Client, Config};
+use grammers_session::FileSession;
+use serde::ser::SerializeSeq;
+use serde::ser::Serializer;
+use simple_logger::SimpleLogger;
 use std::fs::File;
-use std::io::Write;
-use grammers_tl_types::Serializable;
+use tokio::task;
 
 #[tokio::main]
 async fn main() {
@@ -19,15 +18,17 @@ async fn main() {
     let api_hash = env!("TG_HASH").to_string();
 
     println!("Connecting to Telegram...");
-    let mut client = Client::connect(Config {
+    let client = Client::connect(Config {
         session: FileSession::load_or_create("dialogs.session").unwrap(),
         api_id,
         api_hash: api_hash.clone(),
         params: Default::default(),
-    }).await.unwrap();
+    })
+    .await
+    .unwrap();
     println!("Connected!");
 
-    let mut client_handle = client.handle();
+    let client_handle = client.handle();
     task::spawn(async move { client.run_until_disconnected().await });
 
     let mut dialogs = client_handle.iter_dialogs();
@@ -48,7 +49,12 @@ async fn main() {
         res.push(message.text().to_string());
     }
 
-    let string_res = serde_json::to_string_pretty(&res).unwrap();
     let mut file = File::create("rust_backup.txt").unwrap();
-    file.write_all(string_res.as_bytes()).unwrap();
+
+    let mut ser = serde_json::Serializer::new(std::io::Write::by_ref(&mut file));
+    let mut seq = ser.serialize_seq(Some(100)).unwrap();
+    for item in res {
+        seq.serialize_element(&item).unwrap();
+    }
+    seq.end().unwrap();
 }
