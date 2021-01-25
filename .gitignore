@@ -1,4 +1,5 @@
 /target
 .idea
 TgBackup.iml
-
+dialogs.session
+rust_backup.txt

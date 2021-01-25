@@ -7,7 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = { version = "0.3.5", features = ["fs", "sync", "rt-multi-thread"]}
+tokio = { version = "1.1.0", features = ["fs", "sync", "rt-multi-thread", "macros"]}
 grammers-client = { git = "https://github.com/Lonami/grammers" }
 grammers-session = { git = "https://github.com/Lonami/grammers" }
 grammers-tl-types = { git = "https://github.com/Lonami/grammers" }
@@ -15,3 +15,5 @@ grammers-mtsender = { git = "https://github.com/Lonami/grammers" }
 grammers-mtproto = { git = "https://github.com/Lonami/grammers" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+simple_logger = "1.11.0"
+log = "0.4.8"
