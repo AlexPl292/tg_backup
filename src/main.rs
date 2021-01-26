@@ -1,6 +1,8 @@
-mod types;
+use std::fs;
+use std::fs::File;
+use std::path::Path;
+use std::thread::sleep;
 
-use crate::types::{chat_to_info, msg_to_info, MessageInfo};
 use grammers_client::types::Dialog;
 use grammers_client::{Client, ClientHandle, Config};
 use grammers_mtproto::mtp::RpcError;
@@ -9,12 +11,12 @@ use grammers_session::FileSession;
 use serde::ser::SerializeSeq;
 use serde::ser::Serializer;
 use simple_logger::SimpleLogger;
-use std::fs;
-use std::fs::File;
-use std::path::Path;
-use std::thread::sleep;
 use tokio::task;
 use tokio::time::Duration;
+
+use crate::types::{chat_to_info, msg_to_info, MessageInfo};
+
+mod types;
 
 const PATH: &'static str = "backup";
 
@@ -40,18 +42,37 @@ async fn main() {
     println!("Connected!");
 
     let client_handle = client.handle();
+
     task::spawn(async move { client.run_until_disconnected().await });
 
     let mut dialogs = client_handle.iter_dialogs();
 
     let mut chat_index = 0;
-    while let Some(dialog) = dialogs.next().await.unwrap() {
-        chat_index += 1;
-        extract_dialog(&client_handle, chat_index, dialog).await;
+    loop {
+        let dialog_res = dialogs.next().await;
+        match dialog_res {
+            Ok(Some(dialog)) => {
+                chat_index += 1;
+                let client_handle = client_handle.clone();
+
+                // TODO okay, this should be executed in an async manner, but it doesn't work
+                //   not sure why. So let's leave it sync.
+                task::spawn(async move {
+                    extract_dialog(client_handle, chat_index, dialog).await;
+                })
+                .await
+                .unwrap();
+            }
+            Ok(None) => break,
+            Err(e) => {
+                log::error!("{}", e);
+                break;
+            }
+        };
     }
 }
 
-async fn extract_dialog(client_handle: &ClientHandle, chat_index: i32, dialog: Dialog) {
+async fn extract_dialog(client_handle: ClientHandle, chat_index: i32, dialog: Dialog) {
     let chat = dialog.chat();
     let path_str = make_path(chat.name(), chat_index);
     let path = Path::new(path_str.as_str());
