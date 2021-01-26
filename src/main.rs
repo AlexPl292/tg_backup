@@ -1,6 +1,6 @@
 mod types;
 
-use crate::types::{ChatInfo, MessageInfo};
+use crate::types::{MessageInfo, chat_to_info, msg_to_info};
 use grammers_client::{Client, Config};
 use grammers_mtproto::mtp::RpcError;
 use grammers_mtsender::InvocationError;
@@ -54,7 +54,7 @@ async fn main() {
         fs::create_dir_all(path).unwrap();
         let info_file = path.join("info.json");
         let file = File::create(info_file).unwrap();
-        serde_json::to_writer_pretty(&file, &ChatInfo::from(chat.clone())).unwrap();
+        serde_json::to_writer_pretty(&file, &chat_to_info(chat)).unwrap();
 
         let data_file = path.join("data.json");
         let mut file = File::create(data_file).unwrap();
@@ -66,7 +66,7 @@ async fn main() {
             match msg {
                 Ok(Some(message)) => {
                     log::debug!("Write element");
-                    let message_info: MessageInfo = message.into();
+                    let message_info: MessageInfo = msg_to_info(&message);
                     seq.serialize_element(&message_info).unwrap();
                 }
                 Ok(None) => {
