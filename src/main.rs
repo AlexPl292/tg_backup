@@ -15,8 +15,6 @@ use std::thread::sleep;
 use tokio::task;
 use tokio::time::Duration;
 
-const MESSAGES_LIMIT: usize = 10_000;
-
 const PATH: &'static str = "backup";
 
 #[tokio::main]
@@ -59,8 +57,9 @@ async fn main() {
         let data_file = path.join("data.json");
         let mut file = File::create(data_file).unwrap();
         let mut ser = serde_json::Serializer::new(std::io::Write::by_ref(&mut file));
-        let mut seq = ser.serialize_seq(Some(MESSAGES_LIMIT)).unwrap();
-        let mut messages = client_handle.iter_messages(chat).limit(MESSAGES_LIMIT);
+        let mut messages = client_handle.iter_messages(chat);
+        let total = messages.total().await.ok();
+        let mut seq = ser.serialize_seq(total).unwrap();
         loop {
             let msg = messages.next().await;
             match msg {
