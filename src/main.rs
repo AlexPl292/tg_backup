@@ -7,6 +7,8 @@ use simple_logger::SimpleLogger;
 use std::fs::File;
 use tokio::task;
 
+const MESSAGES_LIMIT: usize = 10_000;
+
 #[tokio::main]
 async fn main() {
     SimpleLogger::new()
@@ -42,17 +44,20 @@ async fn main() {
     }
 
     let nic_chat = found_chat.unwrap();
-    let mut messages = client_handle.iter_messages(&nic_chat).limit(100);
+    let mut messages = client_handle.iter_messages(&nic_chat).limit(MESSAGES_LIMIT);
 
     let mut res: Vec<String> = vec![];
-    while let Some(message) = messages.next().await.unwrap() {
-        res.push(message.text().to_string());
+    while let msg = messages.next().await {
+        match msg {
+            Ok(message) => res.push(message.unwrap().text().to_string()),
+            Err(_e) => break
+        };
     }
 
     let mut file = File::create("rust_backup.txt").unwrap();
 
     let mut ser = serde_json::Serializer::new(std::io::Write::by_ref(&mut file));
-    let mut seq = ser.serialize_seq(Some(100)).unwrap();
+    let mut seq = ser.serialize_seq(Some(MESSAGES_LIMIT)).unwrap();
     for item in res {
         seq.serialize_element(&item).unwrap();
     }
