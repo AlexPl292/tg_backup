@@ -146,7 +146,8 @@ async fn save_message(
         Some(media) => {
             match media {
                 Media::Photo(photo) => {
-                    let photos_path = photos_path.join(photo.id().to_string());
+                    let file_name = format!("photo@{}.jpg", photo.id());
+                    let photos_path = photos_path.join(file_name);
                     match message.download_media(&photos_path).await {
                         Ok(_) => {}
                         Err(e) => {
