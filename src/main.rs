@@ -3,7 +3,7 @@ use std::fs::File;
 use std::path::Path;
 use std::thread::sleep;
 
-use grammers_client::types::{Dialog, Message};
+use grammers_client::types::{Dialog, Media, Message};
 use grammers_client::{Client, ClientHandle, Config};
 use grammers_mtproto::mtp::RpcError;
 use grammers_mtsender::InvocationError;
@@ -14,7 +14,7 @@ use simple_logger::SimpleLogger;
 use tokio::task;
 use tokio::time::Duration;
 
-use crate::types::{chat_to_info, msg_to_info, MessageInfo};
+use crate::types::{chat_to_info, msg_to_info, msg_to_photo_info, MessageInfo};
 use serde_json::ser::{CompactFormatter, Compound};
 
 mod types;
@@ -92,6 +92,9 @@ async fn extract_dialog(client_handle: ClientHandle, chat_index: i32, dialog: Di
     let file = File::create(info_file).unwrap();
     serde_json::to_writer_pretty(&file, &chat_to_info(chat)).unwrap();
 
+    let photos_path = path.join("photos");
+    fs::create_dir(&photos_path).unwrap();
+
     let data_file = path.join("data.json");
     let mut file = File::create(data_file).unwrap();
     let mut ser = serde_json::Serializer::new(std::io::Write::by_ref(&mut file));
@@ -101,7 +104,7 @@ async fn extract_dialog(client_handle: ClientHandle, chat_index: i32, dialog: Di
     loop {
         let msg = messages.next().await;
         match msg {
-            Ok(Some(message)) => save_message(&mut seq, &message),
+            Ok(Some(mut message)) => save_message(&mut seq, &mut message, &photos_path).await,
             Ok(None) => {
                 break;
             }
@@ -127,8 +130,36 @@ async fn extract_dialog(client_handle: ClientHandle, chat_index: i32, dialog: Di
     log::info!("Finish writing data: {}", chat.name());
 }
 
-fn save_message(seq: &mut Compound<&mut File, CompactFormatter>, message: &Message) {
+async fn save_message(
+    seq: &mut Compound<'_, &mut File, CompactFormatter>,
+    message: &mut Message,
+    photos_path: &Path,
+) {
     log::debug!("Write element");
+
+    match message.media() {
+        Some(media) => {
+            match media {
+                Media::Photo(photo) => {
+                    let photos_path = photos_path.join(photo.id().to_string());
+                    match message.download_media(&photos_path).await {
+                        Ok(_) => {}
+                        Err(e) => {
+                            log::error!("Cannot load file: {}", e)
+                        }
+                    };
+
+                    let message_with_photo = msg_to_photo_info(message, &photo);
+                    seq.serialize_element(&message_with_photo).unwrap();
+                }
+                _ => save_simple_message(seq, message),
+            };
+        }
+        None => save_simple_message(seq, message),
+    };
+}
+
+fn save_simple_message(seq: &mut Compound<&mut File, CompactFormatter>, message: &mut Message) {
     let message_info: MessageInfo = msg_to_info(&message);
     seq.serialize_element(&message_info).unwrap();
 }
