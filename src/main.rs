@@ -22,7 +22,8 @@ mod types;
 const PATH: &'static str = "backup";
 
 /// Features:
-///  - Support "last backup marker"
+///  - Support loading of messages only before current start
+///      (do not load messages that where received during backing up)
 ///  - Support different message types
 ///  - Fix photos loading
 
