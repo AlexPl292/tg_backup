@@ -21,6 +21,11 @@ mod types;
 
 const PATH: &'static str = "backup";
 
+/// Features:
+///  - Support "last backup marker"
+///  - Support different message types
+///  - Fix photos loading
+
 #[tokio::main]
 async fn main() {
     SimpleLogger::new()
