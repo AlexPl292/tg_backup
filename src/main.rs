@@ -3,7 +3,7 @@ use std::fs::File;
 use std::path::Path;
 use std::thread::sleep;
 
-use grammers_client::types::Dialog;
+use grammers_client::types::{Chat, Dialog};
 use grammers_client::{Client, ClientHandle, Config};
 use grammers_mtproto::mtp::RpcError;
 use grammers_mtsender::InvocationError;
@@ -74,6 +74,13 @@ async fn main() {
 
 async fn extract_dialog(client_handle: ClientHandle, chat_index: i32, dialog: Dialog) {
     let chat = dialog.chat();
+
+    if let Chat::User(_) = chat {
+    } else {
+        // Save only one-to-one dialogs at the moment
+        return;
+    }
+
     let path_str = make_path(chat.name(), chat_index);
     let path = Path::new(path_str.as_str());
     fs::create_dir_all(path).unwrap();
