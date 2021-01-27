@@ -3,7 +3,7 @@ use std::fs::File;
 use std::path::Path;
 use std::thread::sleep;
 
-use grammers_client::types::Dialog;
+use grammers_client::types::{Dialog, Message};
 use grammers_client::{Client, ClientHandle, Config};
 use grammers_mtproto::mtp::RpcError;
 use grammers_mtsender::InvocationError;
@@ -15,6 +15,7 @@ use tokio::task;
 use tokio::time::Duration;
 
 use crate::types::{chat_to_info, msg_to_info, MessageInfo};
+use serde_json::ser::{CompactFormatter, Compound};
 
 mod types;
 
@@ -100,11 +101,7 @@ async fn extract_dialog(client_handle: ClientHandle, chat_index: i32, dialog: Di
     loop {
         let msg = messages.next().await;
         match msg {
-            Ok(Some(message)) => {
-                log::debug!("Write element");
-                let message_info: MessageInfo = msg_to_info(&message);
-                seq.serialize_element(&message_info).unwrap();
-            }
+            Ok(Some(message)) => save_message(&mut seq, &message),
             Ok(None) => {
                 break;
             }
@@ -128,6 +125,12 @@ async fn extract_dialog(client_handle: ClientHandle, chat_index: i32, dialog: Di
     }
     seq.end().unwrap();
     log::info!("Finish writing data: {}", chat.name());
+}
+
+fn save_message(seq: &mut Compound<&mut File, CompactFormatter>, message: &Message) {
+    log::debug!("Write element");
+    let message_info: MessageInfo = msg_to_info(&message);
+    seq.serialize_element(&message_info).unwrap();
 }
 
 fn make_path(name: &str, id: i32) -> String {
