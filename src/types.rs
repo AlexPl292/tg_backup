@@ -24,6 +24,14 @@ pub struct MessageWithPhoto {
     photo: i64,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct MessageWithFile {
+    text: String,
+    id: i32,
+    date: DateTime<Utc>,
+    file: i64,
+}
+
 pub fn msg_to_info(data: &Message) -> MessageInfo {
     MessageInfo {
         text: data.text().to_string(),
@@ -38,6 +46,15 @@ pub fn msg_to_photo_info(data: &Message, photo: &Photo) -> MessageWithPhoto {
         id: data.id(),
         date: data.date(),
         photo: photo.id(),
+    }
+}
+
+pub fn msg_to_file_info(data: &Message, uploaded: i64) -> MessageWithFile {
+    MessageWithFile {
+        text: data.text().to_string(),
+        id: data.id(),
+        date: data.date(),
+        file: uploaded,
     }
 }
 

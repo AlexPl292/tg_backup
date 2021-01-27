@@ -15,7 +15,7 @@ use simple_logger::SimpleLogger;
 use tokio::task;
 use tokio::time::Duration;
 
-use crate::types::{BackUpInfo, chat_to_info, MessageInfo, msg_to_info, msg_to_photo_info};
+use crate::types::{BackUpInfo, chat_to_info, MessageInfo, msg_to_info, msg_to_photo_info, msg_to_file_info};
 
 mod types;
 
@@ -26,6 +26,10 @@ const PATH: &'static str = "backup";
 ///      (do not load messages that where received during backing up)
 ///  - Support different message types
 ///  - Fix photos loading
+///
+/// Bugs:
+///  - Photos are not loading
+///  - Other attachments don't loading
 
 #[tokio::main]
 async fn main() {
@@ -112,6 +116,9 @@ async fn extract_dialog(client_handle: ClientHandle, chat_index: i32, dialog: Di
     let photos_path = path.join("photos");
     fs::create_dir(&photos_path).unwrap();
 
+    let files_path = path.join("files");
+    fs::create_dir(&files_path).unwrap();
+
     let data_file = path.join("data.json");
     let mut file = File::create(data_file).unwrap();
     let mut ser = serde_json::Serializer::new(std::io::Write::by_ref(&mut file));
@@ -121,7 +128,7 @@ async fn extract_dialog(client_handle: ClientHandle, chat_index: i32, dialog: Di
     loop {
         let msg = messages.next().await;
         match msg {
-            Ok(Some(mut message)) => save_message(&mut seq, &mut message, &photos_path).await,
+            Ok(Some(mut message)) => save_message(&mut seq, &mut message, &photos_path, &files_path).await,
             Ok(None) => {
                 break;
             }
@@ -151,6 +158,7 @@ async fn save_message(
     seq: &mut Compound<'_, &mut File, CompactFormatter>,
     message: &mut Message,
     photos_path: &Path,
+    files_path: &Path,
 ) {
     log::debug!("Write element");
 
@@ -169,6 +177,19 @@ async fn save_message(
 
                     let message_with_photo = msg_to_photo_info(message, &photo);
                     seq.serialize_element(&message_with_photo).unwrap();
+                }
+                Media::Uploaded(_) => {
+                    let file_name = format!("file@");
+                    let files_path = files_path.join(file_name);
+                    match message.download_media(&files_path).await {
+                        Ok(_) => {}
+                        Err(e) => {
+                            log::error!("Cannot load file: {}", e)
+                        }
+                    };
+
+                    let message_with_file = msg_to_file_info(message, 1);
+                    seq.serialize_element(&message_with_file).unwrap();
                 }
                 _ => save_simple_message(seq, message),
             };
