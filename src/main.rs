@@ -52,7 +52,7 @@ async fn main() {
 
     task::spawn(async move { client.run_until_disconnected().await });
 
-    fs::create_dir(PATH);
+    fs::create_dir(PATH).unwrap();
 
     save_current_information();
 
