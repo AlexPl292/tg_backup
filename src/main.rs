@@ -171,5 +171,5 @@ fn save_simple_message(seq: &mut Compound<&mut File, CompactFormatter>, message:
 }
 
 fn make_path(name: &str, id: i32) -> String {
-    return format!("{}/{}.{}", PATH, id, name);
+    return format!("{}/chats/{}.{}", PATH, id, name);
 }
