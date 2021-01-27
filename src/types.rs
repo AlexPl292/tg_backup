@@ -47,3 +47,16 @@ pub fn chat_to_info(data: &Chat) -> ChatInfo {
         id: data.id(),
     }
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct BackUpInfo {
+    date: DateTime<Utc>,
+}
+
+impl BackUpInfo {
+    pub fn current_info() -> BackUpInfo {
+        BackUpInfo {
+            date: chrono::offset::Utc::now(),
+        }
+    }
+}

@@ -3,19 +3,19 @@ use std::fs::File;
 use std::path::Path;
 use std::thread::sleep;
 
-use grammers_client::types::{Dialog, Media, Message};
 use grammers_client::{Client, ClientHandle, Config};
+use grammers_client::types::{Dialog, Media, Message};
 use grammers_mtproto::mtp::RpcError;
 use grammers_mtsender::InvocationError;
 use grammers_session::FileSession;
-use serde::ser::SerializeSeq;
 use serde::ser::Serializer;
+use serde::ser::SerializeSeq;
+use serde_json::ser::{CompactFormatter, Compound};
 use simple_logger::SimpleLogger;
 use tokio::task;
 use tokio::time::Duration;
 
-use crate::types::{chat_to_info, msg_to_info, msg_to_photo_info, MessageInfo};
-use serde_json::ser::{CompactFormatter, Compound};
+use crate::types::{BackUpInfo, chat_to_info, MessageInfo, msg_to_info, msg_to_photo_info};
 
 mod types;
 
@@ -51,6 +51,10 @@ async fn main() {
 
     task::spawn(async move { client.run_until_disconnected().await });
 
+    fs::create_dir(PATH);
+
+    save_current_information();
+
     let mut dialogs = client_handle.iter_dialogs();
 
     let mut chat_index = 0;
@@ -76,6 +80,13 @@ async fn main() {
             }
         };
     }
+}
+
+fn save_current_information() -> BackUpInfo {
+    let current_backup_info = BackUpInfo::current_info();
+    let file = File::create(format!("{}/backup.json", PATH)).unwrap();
+    serde_json::to_writer_pretty(&file, &current_backup_info).unwrap();
+    current_backup_info
 }
 
 async fn extract_dialog(client_handle: ClientHandle, chat_index: i32, dialog: Dialog) {
