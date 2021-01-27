@@ -1,6 +1,8 @@
 use grammers_client::types::{Chat, Message};
 use serde::{Deserialize, Serialize};
 
+use chrono::{DateTime, Utc};
+
 #[derive(Serialize, Deserialize)]
 pub struct ChatInfo {
     name: String,
@@ -11,12 +13,14 @@ pub struct ChatInfo {
 pub struct MessageInfo {
     text: String,
     id: i32,
+    date: DateTime<Utc>,
 }
 
 pub fn msg_to_info(data: &Message) -> MessageInfo {
     MessageInfo {
         text: data.text().to_string(),
         id: data.id(),
+        date: data.date(),
     }
 }
 
