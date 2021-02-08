@@ -3,19 +3,22 @@ use std::fs::File;
 use std::path::Path;
 use std::thread::sleep;
 
-use grammers_client::{Client, ClientHandle, Config};
+use grammers_client::types::photo_sizes::VecExt;
 use grammers_client::types::{Dialog, Media, Message};
+use grammers_client::{Client, ClientHandle, Config};
 use grammers_mtproto::mtp::RpcError;
 use grammers_mtsender::InvocationError;
 use grammers_session::FileSession;
-use serde::ser::Serializer;
 use serde::ser::SerializeSeq;
+use serde::ser::Serializer;
 use serde_json::ser::{CompactFormatter, Compound};
 use simple_logger::SimpleLogger;
 use tokio::task;
 use tokio::time::Duration;
 
-use crate::types::{BackUpInfo, chat_to_info, MessageInfo, msg_to_info, msg_to_photo_info, msg_to_file_info};
+use crate::types::{
+    chat_to_info, msg_to_file_info, msg_to_info, msg_to_photo_info, BackUpInfo, MessageInfo,
+};
 
 mod types;
 
@@ -94,7 +97,7 @@ fn save_current_information() -> BackUpInfo {
     current_backup_info
 }
 
-async fn extract_dialog(client_handle: ClientHandle, chat_index: i32, dialog: Dialog) {
+async fn extract_dialog(mut client_handle: ClientHandle, chat_index: i32, dialog: Dialog) {
     let chat = dialog.chat();
 
     if dialog.chat.id() != 422281 {
@@ -128,7 +131,7 @@ async fn extract_dialog(client_handle: ClientHandle, chat_index: i32, dialog: Di
     loop {
         let msg = messages.next().await;
         match msg {
-            Ok(Some(mut message)) => save_message(&mut seq, &mut message, &photos_path, &files_path).await,
+            Ok(Some(mut message)) => save_message(&mut seq, &mut message, &photos_path).await,
             Ok(None) => {
                 break;
             }
@@ -158,44 +161,19 @@ async fn save_message(
     seq: &mut Compound<'_, &mut File, CompactFormatter>,
     message: &mut Message,
     photos_path: &Path,
-    files_path: &Path,
 ) {
     log::debug!("Write element");
 
-    match message.media() {
-        Some(media) => {
-            match media {
-                Media::Photo(photo) => {
-                    let file_name = format!("photo@{}.jpg", photo.id());
-                    let photos_path = photos_path.join(file_name);
-                    match message.download_media(&photos_path).await {
-                        Ok(_) => {}
-                        Err(e) => {
-                            log::error!("Cannot load file: {}", e)
-                        }
-                    };
-
-                    let message_with_photo = msg_to_photo_info(message, &photo);
-                    seq.serialize_element(&message_with_photo).unwrap();
-                }
-                Media::Uploaded(_) => {
-                    let file_name = format!("file@");
-                    let files_path = files_path.join(file_name);
-                    match message.download_media(&files_path).await {
-                        Ok(_) => {}
-                        Err(e) => {
-                            log::error!("Cannot load file: {}", e)
-                        }
-                    };
-
-                    let message_with_file = msg_to_file_info(message, 1);
-                    seq.serialize_element(&message_with_file).unwrap();
-                }
-                _ => save_simple_message(seq, message),
-            };
+    match message.photo() {
+        Some(photo) => {
+            let file_name = format!("photo@{}.jpg", photo.id());
+            let photos_path = photos_path.join(file_name);
+            let thumbs = photo.thumbs();
+            let first = thumbs.largest();
+            first.unwrap().download(&photos_path).await;
         }
         None => save_simple_message(seq, message),
-    };
+    }
 }
 
 fn save_simple_message(seq: &mut Compound<&mut File, CompactFormatter>, message: &mut Message) {
