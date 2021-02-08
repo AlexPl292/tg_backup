@@ -4,7 +4,7 @@ use std::path::Path;
 use std::thread::sleep;
 
 use grammers_client::types::photo_sizes::VecExt;
-use grammers_client::types::{Dialog, Media, Message};
+use grammers_client::types::{Dialog, Media, Message, Photo};
 use grammers_client::{Client, ClientHandle, Config};
 use grammers_mtproto::mtp::RpcError;
 use grammers_mtsender::InvocationError;
@@ -16,9 +16,7 @@ use simple_logger::SimpleLogger;
 use tokio::task;
 use tokio::time::Duration;
 
-use crate::types::{
-    chat_to_info, msg_to_file_info, msg_to_info, msg_to_photo_info, BackUpInfo, MessageInfo,
-};
+use crate::types::{chat_to_info, msg_to_file_info, msg_to_info, msg_to_photo_info, BackUpInfo, MessageInfo, PhotoInfo};
 
 mod types;
 
@@ -97,6 +95,8 @@ fn save_current_information() -> BackUpInfo {
     current_backup_info
 }
 
+const PHOTO_FOLDER: &'static str = "photos";
+
 async fn extract_dialog(mut client_handle: ClientHandle, chat_index: i32, dialog: Dialog) {
     let chat = dialog.chat();
 
@@ -116,7 +116,7 @@ async fn extract_dialog(mut client_handle: ClientHandle, chat_index: i32, dialog
     let file = File::create(info_file).unwrap();
     serde_json::to_writer_pretty(&file, &chat_to_info(chat)).unwrap();
 
-    let photos_path = path.join("photos");
+    let photos_path = path.join(PHOTO_FOLDER);
     fs::create_dir(&photos_path).unwrap();
 
     let files_path = path.join("files");
@@ -167,10 +167,11 @@ async fn save_message(
     match message.photo() {
         Some(photo) => {
             let file_name = format!("photo@{}.jpg", photo.id());
-            let photos_path = photos_path.join(file_name);
+            let photos_path = photos_path.join(file_name.as_str());
             let thumbs = photo.thumbs();
             let first = thumbs.largest();
             first.unwrap().download(&photos_path).await;
+            save_message_with_photo(seq, message, &photo, file_name.as_str());
         }
         None => save_simple_message(seq, message),
     }
@@ -178,6 +179,21 @@ async fn save_message(
 
 fn save_simple_message(seq: &mut Compound<&mut File, CompactFormatter>, message: &mut Message) {
     let message_info: MessageInfo = msg_to_info(&message);
+    seq.serialize_element(&message_info).unwrap();
+}
+
+fn save_message_with_photo(
+    seq: &mut Compound<&mut File, CompactFormatter>,
+    message: &mut Message,
+    photo: &Photo,
+    file_name: &str,
+) {
+    let photo_path = format!("./{}/{}", PHOTO_FOLDER, file_name);
+    let photo_info = PhotoInfo {
+        id: photo.id(),
+        path: photo_path,
+    };
+    let message_info = msg_to_photo_info(&message, photo_info);
     seq.serialize_element(&message_info).unwrap();
 }
 
