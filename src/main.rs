@@ -16,7 +16,7 @@ use simple_logger::SimpleLogger;
 use tokio::task;
 use tokio::time::Duration;
 
-use crate::types::{chat_to_info, msg_to_file_info, msg_to_info, msg_to_photo_info, BackUpInfo, MessageInfo, PhotoInfo};
+use crate::types::{chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, MessageInfo, FileInfo};
 
 mod types;
 
@@ -35,7 +35,7 @@ const PATH: &'static str = "backup";
 #[tokio::main]
 async fn main() {
     SimpleLogger::new()
-        .with_level(log::LevelFilter::Debug)
+        .with_level(log::LevelFilter::Info)
         .init()
         .unwrap();
 
@@ -96,6 +96,7 @@ fn save_current_information() -> BackUpInfo {
 }
 
 const PHOTO_FOLDER: &'static str = "photos";
+const FILES_FOLDER: &'static str = "files";
 
 async fn extract_dialog(mut client_handle: ClientHandle, chat_index: i32, dialog: Dialog) {
     let chat = dialog.chat();
@@ -119,7 +120,7 @@ async fn extract_dialog(mut client_handle: ClientHandle, chat_index: i32, dialog
     let photos_path = path.join(PHOTO_FOLDER);
     fs::create_dir(&photos_path).unwrap();
 
-    let files_path = path.join("files");
+    let files_path = path.join(FILES_FOLDER);
     fs::create_dir(&files_path).unwrap();
 
     let data_file = path.join("data.json");
@@ -131,7 +132,7 @@ async fn extract_dialog(mut client_handle: ClientHandle, chat_index: i32, dialog
     loop {
         let msg = messages.next().await;
         match msg {
-            Ok(Some(mut message)) => save_message(&mut seq, &mut message, &photos_path).await,
+            Ok(Some(mut message)) => save_message(&mut seq, &mut message, &photos_path, &files_path).await,
             Ok(None) => {
                 break;
             }
@@ -161,19 +162,31 @@ async fn save_message(
     seq: &mut Compound<'_, &mut File, CompactFormatter>,
     message: &mut Message,
     photos_path: &Path,
+    files_path: &Path,
 ) {
-    log::debug!("Write element");
-
     match message.photo() {
         Some(photo) => {
+            log::info!("Loading photo {}", message.text());
             let file_name = format!("photo@{}.jpg", photo.id());
             let photos_path = photos_path.join(file_name.as_str());
             let thumbs = photo.thumbs();
             let first = thumbs.largest();
             first.unwrap().download(&photos_path).await;
-            save_message_with_photo(seq, message, &photo, file_name.as_str());
+            let photo_path = format!("./{}/{}", PHOTO_FOLDER, file_name);
+            save_message_with_file(seq, message, photo.id(), photo_path);
         }
-        None => save_simple_message(seq, message),
+        None => {
+            log::info!("Loading no message {}", message.text());
+            save_simple_message(seq, message)
+        },
+    }
+    if let Some(doc) = message.document() {
+        log::info!("File {}", message.text());
+        let file_name = doc.name().unwrap_or(doc.id().to_string());
+        let file_path = files_path.join(file_name.as_str());
+        doc.download(&file_path).await;
+        let photo_path = format!("./{}/{}", FILES_FOLDER, file_name);
+        save_message_with_file(seq, message, doc.id(), photo_path);
     }
 }
 
@@ -182,18 +195,17 @@ fn save_simple_message(seq: &mut Compound<&mut File, CompactFormatter>, message:
     seq.serialize_element(&message_info).unwrap();
 }
 
-fn save_message_with_photo(
+fn save_message_with_file(
     seq: &mut Compound<&mut File, CompactFormatter>,
     message: &mut Message,
-    photo: &Photo,
-    file_name: &str,
+    id: i64,
+    main_folder: String,
 ) {
-    let photo_path = format!("./{}/{}", PHOTO_FOLDER, file_name);
-    let photo_info = PhotoInfo {
-        id: photo.id(),
-        path: photo_path,
+    let photo_info = FileInfo {
+        id: id,
+        path: main_folder,
     };
-    let message_info = msg_to_photo_info(&message, photo_info);
+    let message_info = msg_to_file_info(&message, photo_info);
     seq.serialize_element(&message_info).unwrap();
 }
 

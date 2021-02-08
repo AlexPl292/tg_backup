@@ -17,25 +17,17 @@ pub struct MessageInfo {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct MessageWithPhoto {
-    text: String,
-    id: i32,
-    date: DateTime<Utc>,
-    photo: PhotoInfo,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct PhotoInfo {
-    pub id: i64,
-    pub path: String,
-}
-
-#[derive(Serialize, Deserialize)]
 pub struct MessageWithFile {
     text: String,
     id: i32,
     date: DateTime<Utc>,
-    file: i64,
+    attachment: FileInfo,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct FileInfo {
+    pub id: i64,
+    pub path: String,
 }
 
 pub fn msg_to_info(data: &Message) -> MessageInfo {
@@ -46,21 +38,12 @@ pub fn msg_to_info(data: &Message) -> MessageInfo {
     }
 }
 
-pub fn msg_to_photo_info(data: &Message, photo: PhotoInfo) -> MessageWithPhoto {
-    MessageWithPhoto {
-        text: data.text().to_string(),
-        id: data.id(),
-        date: data.date(),
-        photo,
-    }
-}
-
-pub fn msg_to_file_info(data: &Message, uploaded: i64) -> MessageWithFile {
+pub fn msg_to_file_info(data: &Message, file: FileInfo) -> MessageWithFile {
     MessageWithFile {
         text: data.text().to_string(),
         id: data.id(),
         date: data.date(),
-        file: uploaded,
+        attachment: file,
     }
 }
 
