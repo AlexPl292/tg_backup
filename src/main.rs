@@ -16,7 +16,9 @@ use simple_logger::SimpleLogger;
 use tokio::task;
 use tokio::time::Duration;
 
-use crate::types::{chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, MessageInfo, FileInfo};
+use crate::types::{
+    chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, FileInfo, MessageInfo,
+};
 
 mod types;
 
@@ -97,6 +99,7 @@ fn save_current_information() -> BackUpInfo {
 
 const PHOTO_FOLDER: &'static str = "photos";
 const FILES_FOLDER: &'static str = "files";
+const ROUNDS_FOLDER: &'static str = "rounds";
 
 async fn extract_dialog(mut client_handle: ClientHandle, chat_index: i32, dialog: Dialog) {
     let chat = dialog.chat();
@@ -123,6 +126,9 @@ async fn extract_dialog(mut client_handle: ClientHandle, chat_index: i32, dialog
     let files_path = path.join(FILES_FOLDER);
     fs::create_dir(&files_path).unwrap();
 
+    let round_path = path.join(ROUNDS_FOLDER);
+    fs::create_dir(&round_path).unwrap();
+
     let data_file = path.join("data.json");
     let mut file = File::create(data_file).unwrap();
     let mut ser = serde_json::Serializer::new(std::io::Write::by_ref(&mut file));
@@ -132,7 +138,16 @@ async fn extract_dialog(mut client_handle: ClientHandle, chat_index: i32, dialog
     loop {
         let msg = messages.next().await;
         match msg {
-            Ok(Some(mut message)) => save_message(&mut seq, &mut message, &photos_path, &files_path).await,
+            Ok(Some(mut message)) => {
+                save_message(
+                    &mut seq,
+                    &mut message,
+                    &photos_path,
+                    &files_path,
+                    &round_path,
+                )
+                .await
+            }
             Ok(None) => {
                 break;
             }
@@ -163,6 +178,7 @@ async fn save_message(
     message: &mut Message,
     photos_path: &Path,
     files_path: &Path,
+    round_path: &Path,
 ) {
     match message.photo() {
         Some(photo) => {
@@ -178,15 +194,25 @@ async fn save_message(
         None => {
             log::info!("Loading no message {}", message.text());
             save_simple_message(seq, message)
-        },
+        }
     }
     if let Some(doc) = message.document() {
-        log::info!("File {}", message.text());
-        let file_name = doc.name().unwrap_or(doc.id().to_string());
-        let file_path = files_path.join(file_name.as_str());
-        doc.download(&file_path).await;
-        let photo_path = format!("./{}/{}", FILES_FOLDER, file_name);
-        save_message_with_file(seq, message, doc.id(), photo_path);
+        if doc.is_round_message() {
+            log::info!("Round message {}", message.text());
+            let file_name = doc.name().unwrap_or(doc.id().to_string());
+            let file_name = format!("{}.mp4", file_name);
+            let file_path = round_path.join(file_name.as_str());
+            doc.download(&file_path).await;
+            let photo_path = format!("./{}/{}", ROUNDS_FOLDER, file_name);
+            save_message_with_file(seq, message, doc.id(), photo_path);
+        } else {
+            log::info!("File {}", message.text());
+            let file_name = doc.name().unwrap_or(doc.id().to_string());
+            let file_path = files_path.join(file_name.as_str());
+            doc.download(&file_path).await;
+            let photo_path = format!("./{}/{}", FILES_FOLDER, file_name);
+            save_message_with_file(seq, message, doc.id(), photo_path);
+        }
     }
 }
 
