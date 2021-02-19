@@ -27,6 +27,7 @@ pub struct MessageWithFile {
 #[derive(Serialize, Deserialize)]
 pub struct FileInfo {
     pub id: i64,
+    pub attachment_type: String,
     pub path: String,
 }
 

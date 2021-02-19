@@ -101,6 +101,10 @@ const PHOTO_FOLDER: &'static str = "photos";
 const FILES_FOLDER: &'static str = "files";
 const ROUNDS_FOLDER: &'static str = "rounds";
 
+const PHOTO: &'static str = "photo";
+const FILE: &'static str = "file";
+const ROUND: &'static str = "round";
+
 async fn extract_dialog(mut client_handle: ClientHandle, chat_index: i32, dialog: Dialog) {
     let chat = dialog.chat();
 
@@ -189,7 +193,7 @@ async fn save_message(
             let first = thumbs.largest();
             first.unwrap().download(&photos_path).await;
             let photo_path = format!("./{}/{}", PHOTO_FOLDER, file_name);
-            save_message_with_file(seq, message, photo.id(), photo_path);
+            save_message_with_file(seq, message, photo.id(), photo_path, PHOTO);
         }
         None => {
             log::info!("Loading no message {}", message.text());
@@ -204,14 +208,14 @@ async fn save_message(
             let file_path = round_path.join(file_name.as_str());
             doc.download(&file_path).await;
             let photo_path = format!("./{}/{}", ROUNDS_FOLDER, file_name);
-            save_message_with_file(seq, message, doc.id(), photo_path);
+            save_message_with_file(seq, message, doc.id(), photo_path, ROUND);
         } else {
             log::info!("File {}", message.text());
             let file_name = doc.name().unwrap_or(doc.id().to_string());
             let file_path = files_path.join(file_name.as_str());
             doc.download(&file_path).await;
             let photo_path = format!("./{}/{}", FILES_FOLDER, file_name);
-            save_message_with_file(seq, message, doc.id(), photo_path);
+            save_message_with_file(seq, message, doc.id(), photo_path, FILE);
         }
     }
 }
@@ -226,9 +230,11 @@ fn save_message_with_file(
     message: &mut Message,
     id: i64,
     main_folder: String,
+    attachment_type: &str,
 ) {
     let photo_info = FileInfo {
-        id: id,
+        id,
+        attachment_type: attachment_type.to_string(),
         path: main_folder,
     };
     let message_info = msg_to_file_info(&message, photo_info);
