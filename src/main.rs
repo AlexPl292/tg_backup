@@ -1,10 +1,11 @@
+use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::path::Path;
 use std::thread::sleep;
 
 use grammers_client::types::photo_sizes::VecExt;
-use grammers_client::types::{Dialog, Media, Message, Photo};
+use grammers_client::types::{Dialog, Message};
 use grammers_client::{Client, ClientHandle, Config};
 use grammers_mtproto::mtp::RpcError;
 use grammers_mtsender::InvocationError;
@@ -16,10 +17,12 @@ use simple_logger::SimpleLogger;
 use tokio::task;
 use tokio::time::Duration;
 
+use crate::attachment_type::AttachmentType;
 use crate::types::{
     chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, FileInfo, MessageInfo,
 };
 
+mod attachment_type;
 mod types;
 
 const PATH: &'static str = "backup";
@@ -98,17 +101,24 @@ fn save_current_information() -> BackUpInfo {
     current_backup_info
 }
 
-const PHOTO_FOLDER: &'static str = "photos";
-const FILES_FOLDER: &'static str = "files";
-const ROUNDS_FOLDER: &'static str = "rounds";
-const VOICE_FOLDER: &'static str = "voice_messages";
-
 const PHOTO: &'static str = "photo";
 const FILE: &'static str = "file";
 const ROUND: &'static str = "round";
 const VOICE: &'static str = "voice";
 
-async fn extract_dialog(mut client_handle: ClientHandle, chat_index: i32, dialog: Dialog) {
+fn init_types() -> HashMap<&'static str, AttachmentType> {
+    let mut map = HashMap::new();
+    map.insert(PHOTO, AttachmentType::init("photos", PHOTO, Some(".jpg")));
+    map.insert(FILE, AttachmentType::init("files", FILE, None));
+    map.insert(ROUND, AttachmentType::init("rounds", ROUND, Some(".mp4")));
+    map.insert(
+        VOICE,
+        AttachmentType::init("voice_messages", VOICE, Some(".ogg")),
+    );
+    map
+}
+
+async fn extract_dialog(client_handle: ClientHandle, chat_index: i32, dialog: Dialog) {
     let chat = dialog.chat();
 
     if dialog.chat.id() != 422281 {
@@ -120,26 +130,17 @@ async fn extract_dialog(mut client_handle: ClientHandle, chat_index: i32, dialog
         return;
     } */
 
-    let path_str = make_path(chat.name(), chat_index);
-    let path = Path::new(path_str.as_str());
-    fs::create_dir_all(path).unwrap();
-    let info_file = path.join("info.json");
+    let chat_path_string = make_path(chat.name(), chat_index);
+    let chat_path = Path::new(chat_path_string.as_str());
+    fs::create_dir_all(chat_path).unwrap();
+    let info_file = chat_path.join("info.json");
     let file = File::create(info_file).unwrap();
     serde_json::to_writer_pretty(&file, &chat_to_info(chat)).unwrap();
 
-    let photos_path = path.join(PHOTO_FOLDER);
-    fs::create_dir(&photos_path).unwrap();
+    let mut types = init_types();
+    types.values_mut().for_each(|x| x.init_folder(chat_path));
 
-    let files_path = path.join(FILES_FOLDER);
-    fs::create_dir(&files_path).unwrap();
-
-    let round_path = path.join(ROUNDS_FOLDER);
-    fs::create_dir(&round_path).unwrap();
-
-    let voice_path = path.join(VOICE_FOLDER);
-    fs::create_dir(&voice_path).unwrap();
-
-    let data_file = path.join("data.json");
+    let data_file = chat_path.join("data.json");
     let mut file = File::create(data_file).unwrap();
     let mut ser = serde_json::Serializer::new(std::io::Write::by_ref(&mut file));
     let mut messages = client_handle.iter_messages(chat);
@@ -148,17 +149,7 @@ async fn extract_dialog(mut client_handle: ClientHandle, chat_index: i32, dialog
     loop {
         let msg = messages.next().await;
         match msg {
-            Ok(Some(mut message)) => {
-                save_message(
-                    &mut seq,
-                    &mut message,
-                    &photos_path,
-                    &files_path,
-                    &round_path,
-                    &voice_path,
-                )
-                .await
-            }
+            Ok(Some(mut message)) => save_message(&mut seq, &mut message, &types).await,
             Ok(None) => {
                 break;
             }
@@ -187,52 +178,50 @@ async fn extract_dialog(mut client_handle: ClientHandle, chat_index: i32, dialog
 async fn save_message(
     seq: &mut Compound<'_, &mut File, CompactFormatter>,
     message: &mut Message,
-    photos_path: &Path,
-    files_path: &Path,
-    round_path: &Path,
-    voice_path: &Path,
+    types: &HashMap<&str, AttachmentType>,
 ) {
-    match message.photo() {
-        Some(photo) => {
-            log::info!("Loading photo {}", message.text());
-            let file_name = format!("photo@{}.jpg", photo.id());
-            let photos_path = photos_path.join(file_name.as_str());
-            let thumbs = photo.thumbs();
-            let first = thumbs.largest();
-            first.unwrap().download(&photos_path).await;
-            let photo_path = format!("./{}/{}", PHOTO_FOLDER, file_name);
-            save_message_with_file(seq, message, photo.id(), photo_path, PHOTO);
-        }
-        None => {
-            log::info!("Loading no message {}", message.text());
-            save_simple_message(seq, message)
-        }
-    }
-    if let Some(doc) = message.document() {
-        if doc.is_round_message() {
+    let res = if let Some(photo) = message.photo() {
+        log::info!("Loading photo {}", message.text());
+        let att_type = types.get(PHOTO).unwrap();
+        let file_name = format!("photo@{}.jpg", photo.id());
+        let photos_path = att_type.path().join(file_name.as_str());
+        let thumbs = photo.thumbs();
+        let first = thumbs.largest();
+        first.unwrap().download(&photos_path).await;
+        Some((att_type, file_name, photo.id()))
+    } else if let Some(doc) = message.document() {
+        let current_type = if doc.is_round_message() {
             log::info!("Round message {}", message.text());
-            let file_name = doc.name().unwrap_or(doc.id().to_string());
-            let file_name = format!("{}.mp4", file_name);
-            let file_path = round_path.join(file_name.as_str());
-            doc.download(&file_path).await;
-            let photo_path = format!("./{}/{}", ROUNDS_FOLDER, file_name);
-            save_message_with_file(seq, message, doc.id(), photo_path, ROUND);
+            types.get(ROUND).unwrap()
         } else if doc.is_voice_message() {
             log::info!("Voice message {}", message.text());
-            let file_name = doc.name().unwrap_or(doc.id().to_string());
-            let file_name = format!("{}.ogg", file_name);
-            let file_path = voice_path.join(file_name.as_str());
-            doc.download(&file_path).await;
-            let photo_path = format!("./{}/{}", VOICE_FOLDER, file_name);
-            save_message_with_file(seq, message, doc.id(), photo_path, VOICE);
+            types.get(VOICE).unwrap()
         } else {
             log::info!("File {}", message.text());
-            let file_name = doc.name().unwrap_or(doc.id().to_string());
-            let file_path = files_path.join(file_name.as_str());
-            doc.download(&file_path).await;
-            let photo_path = format!("./{}/{}", FILES_FOLDER, file_name);
-            save_message_with_file(seq, message, doc.id(), photo_path, FILE);
-        }
+            types.get(FILE).unwrap()
+        };
+
+        let file_name = doc.name().unwrap_or(doc.id().to_string());
+        let file_name = current_type.format(file_name);
+        let file_path = current_type.path().join(file_name.as_str());
+        doc.download(&file_path).await;
+        Some((current_type, file_name, doc.id()))
+    } else {
+        None
+    };
+
+    if let Some((current_type, file_name, id)) = res {
+        let photo_path = format!("./{}/{}", current_type.folder, file_name);
+        save_message_with_file(
+            seq,
+            message,
+            id,
+            photo_path,
+            current_type.type_name.as_str(),
+        );
+    } else {
+        log::info!("Loading no message {}", message.text());
+        save_simple_message(seq, message);
     }
 }
 

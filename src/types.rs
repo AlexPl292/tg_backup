@@ -1,4 +1,4 @@
-use grammers_client::types::{Chat, Message, Photo};
+use grammers_client::types::{Chat, Message};
 use serde::{Deserialize, Serialize};
 
 use chrono::{DateTime, Utc};
