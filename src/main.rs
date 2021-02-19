@@ -59,6 +59,7 @@ async fn main() {
 
     task::spawn(async move { client.run_until_disconnected().await });
 
+    fs::remove_dir_all(PATH).unwrap();
     fs::create_dir(PATH).unwrap();
 
     save_current_information();
@@ -100,10 +101,12 @@ fn save_current_information() -> BackUpInfo {
 const PHOTO_FOLDER: &'static str = "photos";
 const FILES_FOLDER: &'static str = "files";
 const ROUNDS_FOLDER: &'static str = "rounds";
+const VOICE_FOLDER: &'static str = "voice_messages";
 
 const PHOTO: &'static str = "photo";
 const FILE: &'static str = "file";
 const ROUND: &'static str = "round";
+const VOICE: &'static str = "voice";
 
 async fn extract_dialog(mut client_handle: ClientHandle, chat_index: i32, dialog: Dialog) {
     let chat = dialog.chat();
@@ -133,6 +136,9 @@ async fn extract_dialog(mut client_handle: ClientHandle, chat_index: i32, dialog
     let round_path = path.join(ROUNDS_FOLDER);
     fs::create_dir(&round_path).unwrap();
 
+    let voice_path = path.join(VOICE_FOLDER);
+    fs::create_dir(&voice_path).unwrap();
+
     let data_file = path.join("data.json");
     let mut file = File::create(data_file).unwrap();
     let mut ser = serde_json::Serializer::new(std::io::Write::by_ref(&mut file));
@@ -149,6 +155,7 @@ async fn extract_dialog(mut client_handle: ClientHandle, chat_index: i32, dialog
                     &photos_path,
                     &files_path,
                     &round_path,
+                    &voice_path,
                 )
                 .await
             }
@@ -183,6 +190,7 @@ async fn save_message(
     photos_path: &Path,
     files_path: &Path,
     round_path: &Path,
+    voice_path: &Path,
 ) {
     match message.photo() {
         Some(photo) => {
@@ -209,6 +217,14 @@ async fn save_message(
             doc.download(&file_path).await;
             let photo_path = format!("./{}/{}", ROUNDS_FOLDER, file_name);
             save_message_with_file(seq, message, doc.id(), photo_path, ROUND);
+        } else if doc.is_voice_message() {
+            log::info!("Voice message {}", message.text());
+            let file_name = doc.name().unwrap_or(doc.id().to_string());
+            let file_name = format!("{}.ogg", file_name);
+            let file_path = voice_path.join(file_name.as_str());
+            doc.download(&file_path).await;
+            let photo_path = format!("./{}/{}", VOICE_FOLDER, file_name);
+            save_message_with_file(seq, message, doc.id(), photo_path, VOICE);
         } else {
             log::info!("File {}", message.text());
             let file_name = doc.name().unwrap_or(doc.id().to_string());
