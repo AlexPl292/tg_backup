@@ -4,6 +4,7 @@ use std::fs::File;
 use std::path::Path;
 use std::thread::sleep;
 
+use chrono::{DateTime, Utc};
 use grammers_client::types::photo_sizes::VecExt;
 use grammers_client::types::{Dialog, Message};
 use grammers_client::{Client, ClientHandle, Config};
@@ -16,9 +17,8 @@ use tokio::time::Duration;
 
 use crate::attachment_type::AttachmentType;
 use crate::types::{
-    chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, FileInfo, MessageInfo,
+    chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, Error, FileInfo, MessageInfo,
 };
-use chrono::{DateTime, Utc};
 
 mod attachment_type;
 mod types;
@@ -113,6 +113,7 @@ struct Context {
     types: HashMap<String, AttachmentType>,
     messages_accumulator: Vec<MessageInfo>,
     accumulator_counter: i32,
+    errors: Vec<Error>,
 }
 
 impl Context {
@@ -123,7 +124,14 @@ impl Context {
             types,
             messages_accumulator: vec![],
             accumulator_counter: 0,
+            errors: vec![],
         }
+    }
+
+    fn save_errors(&self, path: &Path, id: i32) {
+        let errors_path = path.join(format!("errors-{}.json", id));
+        let file = File::create(errors_path).unwrap();
+        serde_json::to_writer_pretty(file, &self.errors).unwrap();
     }
 
     fn init_types() -> HashMap<String, AttachmentType> {
@@ -185,6 +193,10 @@ async fn extract_dialog(
         return;
     } */
 
+    let errors_path_string = format!("{}/errors", PATH);
+    let error_path = Path::new(errors_path_string.as_str());
+    let _ = fs::create_dir(error_path);
+
     let chat_path_string = make_path(chat.name(), chat_index);
     let chat_path = Path::new(chat_path_string.as_str());
     fs::create_dir_all(chat_path).unwrap();
@@ -197,10 +209,14 @@ async fn extract_dialog(
     let mut messages = client_handle
         .iter_messages(chat)
         .offset_date(current_time.timestamp() as i32);
+    let mut last_message: Option<(i32, DateTime<Utc>)> = None;
     loop {
         let msg = messages.next().await;
         match msg {
-            Ok(Some(mut message)) => save_message(&mut message, &mut context).await,
+            Ok(Some(mut message)) => {
+                last_message = Some((message.id(), message.date()));
+                save_message(&mut message, &mut context).await
+            }
             Ok(None) => {
                 break;
             }
@@ -215,15 +231,22 @@ async fn extract_dialog(
                 } else if name == "FILE_MIGRATE" {
                     log::warn!("File migrate: {}", value.unwrap());
                 } else {
+                    if let Some((id, date)) = last_message {
+                        context.errors.push(Error::NotFullLoading(id, date));
+                    }
                     break;
                 }
             }
             Err(e) => {
                 log::error!("Error {}", e);
+                if let Some((id, date)) = last_message {
+                    context.errors.push(Error::NotFullLoading(id, date));
+                }
                 break;
             }
         };
     }
+    context.save_errors(error_path, chat.id());
     context.force_drop_messages();
     log::info!("Finish writing data: {}", chat.name());
 }
