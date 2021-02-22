@@ -106,22 +106,37 @@ const FILE: &'static str = "file";
 const ROUND: &'static str = "round";
 const VOICE: &'static str = "voice";
 
-fn init_types() -> HashMap<&'static str, AttachmentType> {
-    let mut map = HashMap::new();
-    map.insert(PHOTO, AttachmentType::init("photos", PHOTO, Some(".jpg")));
-    map.insert(FILE, AttachmentType::init("files", FILE, None));
-    map.insert(ROUND, AttachmentType::init("rounds", ROUND, Some(".mp4")));
-    map.insert(
-        VOICE,
-        AttachmentType::init("voice_messages", VOICE, Some(".ogg")),
-    );
-    map
+struct Context {
+    types: HashMap<String, AttachmentType>,
+}
+
+impl Context {
+    pub fn init(path: &Path) -> Context {
+        let mut types = Context::init_types();
+        types.values_mut().for_each(|x| x.init_folder(path));
+        Context {
+            types,
+        }
+    }
+
+    fn init_types() -> HashMap<String, AttachmentType> {
+        let mut map = HashMap::new();
+        map.insert(PHOTO.to_string(), AttachmentType::init("photos", PHOTO, Some(".jpg")));
+        map.insert(FILE.to_string(), AttachmentType::init("files", FILE, None));
+        map.insert(ROUND.to_string(), AttachmentType::init("rounds", ROUND, Some(".mp4")));
+        map.insert(
+            VOICE.to_string(),
+            AttachmentType::init("voice_messages", VOICE, Some(".ogg")),
+        );
+        map
+    }
 }
 
 async fn extract_dialog(client_handle: ClientHandle, chat_index: i32, dialog: Dialog) {
     let chat = dialog.chat();
 
-    if dialog.chat.id() != 422281 {
+    // println!("{}/{}", dialog.chat.name(), dialog.chat.id());
+    if dialog.chat.id() != 59061750 {
         return;
     }
     /*    if let Chat::User(_) = chat {
@@ -137,8 +152,7 @@ async fn extract_dialog(client_handle: ClientHandle, chat_index: i32, dialog: Di
     let file = File::create(info_file).unwrap();
     serde_json::to_writer_pretty(&file, &chat_to_info(chat)).unwrap();
 
-    let mut types = init_types();
-    types.values_mut().for_each(|x| x.init_folder(chat_path));
+    let context = Context::init(chat_path);
 
     let data_file = chat_path.join("data.json");
     let mut file = File::create(data_file).unwrap();
@@ -149,7 +163,7 @@ async fn extract_dialog(client_handle: ClientHandle, chat_index: i32, dialog: Di
     loop {
         let msg = messages.next().await;
         match msg {
-            Ok(Some(mut message)) => save_message(&mut seq, &mut message, &types).await,
+            Ok(Some(mut message)) => save_message(&mut seq, &mut message, &context).await,
             Ok(None) => {
                 break;
             }
@@ -180,8 +194,9 @@ async fn extract_dialog(client_handle: ClientHandle, chat_index: i32, dialog: Di
 async fn save_message(
     seq: &mut Compound<'_, &mut File, CompactFormatter>,
     message: &mut Message,
-    types: &HashMap<&str, AttachmentType>,
+    context: &Context,
 ) {
+    let types = &context.types;
     let res = if let Some(photo) = message.photo() {
         log::info!("Loading photo {}", message.text());
         let att_type = types.get(PHOTO).unwrap();
