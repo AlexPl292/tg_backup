@@ -62,7 +62,7 @@ async fn main() {
 
     task::spawn(async move { client.run_until_disconnected().await });
 
-    fs::remove_dir_all(PATH).unwrap();
+    let _ = fs::remove_dir_all(PATH);
     fs::create_dir(PATH).unwrap();
 
     save_current_information();
@@ -159,8 +159,10 @@ async fn extract_dialog(client_handle: ClientHandle, chat_index: i32, dialog: Di
                 value,
             })) => {
                 if name == "FLOOD_WAIT" {
-                    log::info!("Flood wait: {}", value.unwrap());
+                    log::warn!("Flood wait: {}", value.unwrap());
                     sleep(Duration::from_secs(value.unwrap() as u64))
+                } else if name == "FILE_MIGRATE" {
+                    log::warn!("File migrate: {}", value.unwrap());
                 } else {
                     break;
                 }
@@ -183,12 +185,26 @@ async fn save_message(
     let res = if let Some(photo) = message.photo() {
         log::info!("Loading photo {}", message.text());
         let att_type = types.get(PHOTO).unwrap();
-        let file_name = format!("photo@{}.jpg", photo.id());
+        let photo_id = photo.id();
+        let id = match photo_id {
+            Some(id) => id,
+            None => {
+                log::error!("Cannot get photo id");
+                return;
+            }
+        };
+        let file_name = format!("photo@{}.jpg", id);
         let photos_path = att_type.path().join(file_name.as_str());
         let thumbs = photo.thumbs();
         let first = thumbs.largest();
-        first.unwrap().download(&photos_path).await;
-        Some((att_type, file_name, photo.id()))
+        let downloaded = first.unwrap().download(&photos_path).await;
+        if let Err(_) = downloaded {
+            // TODO process it in a better way
+            log::error!("Cannot download photo");
+            None
+        } else {
+            Some((att_type, file_name, id))
+        }
     } else if let Some(doc) = message.document() {
         let current_type = if doc.is_round_message() {
             log::info!("Round message {}", message.text());
@@ -220,7 +236,7 @@ async fn save_message(
             current_type.type_name.as_str(),
         );
     } else {
-        log::info!("Loading no message {}", message.text());
+        // log::info!("Loading no message {}", message.text());
         save_simple_message(seq, message);
     }
 }
