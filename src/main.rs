@@ -18,6 +18,7 @@ use crate::attachment_type::AttachmentType;
 use crate::types::{
     chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, FileInfo, MessageInfo,
 };
+use chrono::{DateTime, Utc};
 
 mod attachment_type;
 mod types;
@@ -62,7 +63,9 @@ async fn main() {
     let _ = fs::remove_dir_all(PATH);
     fs::create_dir(PATH).unwrap();
 
-    save_current_information();
+    let backup_info = save_current_information();
+
+    let current_time = backup_info.date;
 
     let mut dialogs = client_handle.iter_dialogs();
 
@@ -77,7 +80,7 @@ async fn main() {
                 // TODO okay, this should be executed in an async manner, but it doesn't work
                 //   not sure why. So let's leave it sync.
                 task::spawn(async move {
-                    extract_dialog(client_handle, chat_index, dialog).await;
+                    extract_dialog(client_handle, chat_index, dialog, current_time).await;
                 })
                 .await
                 .unwrap();
@@ -164,7 +167,12 @@ impl Context {
     }
 }
 
-async fn extract_dialog(client_handle: ClientHandle, chat_index: i32, dialog: Dialog) {
+async fn extract_dialog(
+    client_handle: ClientHandle,
+    chat_index: i32,
+    dialog: Dialog,
+    current_time: DateTime<Utc>,
+) {
     let chat = dialog.chat();
 
     // println!("{}/{}", dialog.chat.name(), dialog.chat.id());
@@ -186,7 +194,9 @@ async fn extract_dialog(client_handle: ClientHandle, chat_index: i32, dialog: Di
 
     let mut context = Context::init(chat_path);
 
-    let mut messages = client_handle.iter_messages(chat);
+    let mut messages = client_handle
+        .iter_messages(chat)
+        .offset_date(current_time.timestamp() as i32);
     loop {
         let msg = messages.next().await;
         match msg {

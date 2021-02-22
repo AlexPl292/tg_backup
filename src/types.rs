@@ -51,7 +51,7 @@ pub fn chat_to_info(data: &Chat) -> ChatInfo {
 
 #[derive(Serialize, Deserialize)]
 pub struct BackUpInfo {
-    date: DateTime<Utc>,
+    pub date: DateTime<Utc>,
 }
 
 impl BackUpInfo {
