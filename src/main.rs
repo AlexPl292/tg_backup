@@ -10,9 +10,6 @@ use grammers_client::{Client, ClientHandle, Config};
 use grammers_mtproto::mtp::RpcError;
 use grammers_mtsender::InvocationError;
 use grammers_session::FileSession;
-use serde::ser::SerializeSeq;
-use serde::ser::Serializer;
-use serde_json::ser::{CompactFormatter, Compound};
 use simple_logger::SimpleLogger;
 use tokio::task;
 use tokio::time::Duration;
@@ -101,13 +98,18 @@ fn save_current_information() -> BackUpInfo {
     current_backup_info
 }
 
+const MESSAGES: &'static str = "messages";
 const PHOTO: &'static str = "photo";
 const FILE: &'static str = "file";
 const ROUND: &'static str = "round";
 const VOICE: &'static str = "voice";
 
+const ACCUMULATOR_SIZE: usize = 1_000;
+
 struct Context {
     types: HashMap<String, AttachmentType>,
+    messages_accumulator: Vec<MessageInfo>,
+    accumulator_counter: i32,
 }
 
 impl Context {
@@ -116,19 +118,49 @@ impl Context {
         types.values_mut().for_each(|x| x.init_folder(path));
         Context {
             types,
+            messages_accumulator: vec![],
+            accumulator_counter: 0,
         }
     }
 
     fn init_types() -> HashMap<String, AttachmentType> {
         let mut map = HashMap::new();
-        map.insert(PHOTO.to_string(), AttachmentType::init("photos", PHOTO, Some(".jpg")));
+        map.insert(
+            MESSAGES.to_string(),
+            AttachmentType::init("messages", MESSAGES, None),
+        );
+        map.insert(
+            PHOTO.to_string(),
+            AttachmentType::init("photos", PHOTO, Some(".jpg")),
+        );
         map.insert(FILE.to_string(), AttachmentType::init("files", FILE, None));
-        map.insert(ROUND.to_string(), AttachmentType::init("rounds", ROUND, Some(".mp4")));
+        map.insert(
+            ROUND.to_string(),
+            AttachmentType::init("rounds", ROUND, Some(".mp4")),
+        );
         map.insert(
             VOICE.to_string(),
             AttachmentType::init("voice_messages", VOICE, Some(".ogg")),
         );
         map
+    }
+
+    fn drop_messages(&mut self) {
+        if self.messages_accumulator.len() < ACCUMULATOR_SIZE {
+            return;
+        }
+        self.force_drop_messages()
+    }
+
+    fn force_drop_messages(&mut self) {
+        let data_type = self.types.get(MESSAGES).unwrap();
+        let messages_path = data_type.path();
+        let file_path = messages_path.join(format!("data-{}.json", self.accumulator_counter));
+        let file = File::create(file_path).unwrap();
+        serde_json::to_writer_pretty(&file, &self.messages_accumulator).unwrap();
+
+        self.messages_accumulator.clear();
+        self.accumulator_counter += 1;
     }
 }
 
@@ -152,18 +184,13 @@ async fn extract_dialog(client_handle: ClientHandle, chat_index: i32, dialog: Di
     let file = File::create(info_file).unwrap();
     serde_json::to_writer_pretty(&file, &chat_to_info(chat)).unwrap();
 
-    let context = Context::init(chat_path);
+    let mut context = Context::init(chat_path);
 
-    let data_file = chat_path.join("data.json");
-    let mut file = File::create(data_file).unwrap();
-    let mut ser = serde_json::Serializer::new(std::io::Write::by_ref(&mut file));
     let mut messages = client_handle.iter_messages(chat);
-    let total = messages.total().await.ok();
-    let mut seq = ser.serialize_seq(total).unwrap();
     loop {
         let msg = messages.next().await;
         match msg {
-            Ok(Some(mut message)) => save_message(&mut seq, &mut message, &context).await,
+            Ok(Some(mut message)) => save_message(&mut message, &mut context).await,
             Ok(None) => {
                 break;
             }
@@ -187,15 +214,11 @@ async fn extract_dialog(client_handle: ClientHandle, chat_index: i32, dialog: Di
             }
         };
     }
-    seq.end().unwrap();
+    context.force_drop_messages();
     log::info!("Finish writing data: {}", chat.name());
 }
 
-async fn save_message(
-    seq: &mut Compound<'_, &mut File, CompactFormatter>,
-    message: &mut Message,
-    context: &Context,
-) {
+async fn save_message(message: &mut Message, context: &mut Context) {
     let types = &context.types;
     let res = if let Some(photo) = message.photo() {
         log::info!("Loading photo {}", message.text());
@@ -242,39 +265,20 @@ async fn save_message(
     };
 
     if let Some((current_type, file_name, id)) = res {
-        let photo_path = format!("./{}/{}", current_type.folder, file_name);
-        save_message_with_file(
-            seq,
-            message,
+        let photo_path = format!("../{}/{}", current_type.folder, file_name);
+        let attachment_type = current_type.type_name.as_str();
+        let attachment_info = FileInfo {
             id,
-            photo_path,
-            current_type.type_name.as_str(),
-        );
+            attachment_type: attachment_type.to_string(),
+            path: photo_path,
+        };
+        let message_info = msg_to_file_info(&message, attachment_info);
+        context.messages_accumulator.push(message_info);
     } else {
         // log::info!("Loading no message {}", message.text());
-        save_simple_message(seq, message);
+        context.messages_accumulator.push(msg_to_info(message));
     }
-}
-
-fn save_simple_message(seq: &mut Compound<&mut File, CompactFormatter>, message: &mut Message) {
-    let message_info: MessageInfo = msg_to_info(&message);
-    seq.serialize_element(&message_info).unwrap();
-}
-
-fn save_message_with_file(
-    seq: &mut Compound<&mut File, CompactFormatter>,
-    message: &mut Message,
-    id: i64,
-    main_folder: String,
-    attachment_type: &str,
-) {
-    let photo_info = FileInfo {
-        id,
-        attachment_type: attachment_type.to_string(),
-        path: main_folder,
-    };
-    let message_info = msg_to_file_info(&message, photo_info);
-    seq.serialize_element(&message_info).unwrap();
+    context.drop_messages();
 }
 
 fn make_path(name: &str, id: i32) -> String {
