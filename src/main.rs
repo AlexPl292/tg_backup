@@ -92,9 +92,10 @@ async fn extract_dialog(
     let chat_path_string = make_path(chat.name(), chat_index);
     let chat_path = Path::new(chat_path_string.as_str());
     fs::create_dir_all(chat_path).unwrap();
-    let info_file = chat_path.join("info.json");
-    let file = File::create(info_file).unwrap();
-    serde_json::to_writer_pretty(&file, &chat_to_info(chat)).unwrap();
+
+    let info_file_path = chat_path.join("info.json");
+    let info_file = File::create(info_file_path).unwrap();
+    serde_json::to_writer_pretty(&info_file, &chat_to_info(chat)).unwrap();
 
     let mut context = Context::init(chat_path);
 
