@@ -6,7 +6,7 @@ use std::thread::sleep;
 
 use chrono::{DateTime, Utc};
 use grammers_client::types::photo_sizes::VecExt;
-use grammers_client::types::{Dialog, Message};
+use grammers_client::types::{Chat, Dialog, Message};
 use grammers_client::{Client, ClientHandle, Config};
 use grammers_mtproto::mtp::RpcError;
 use grammers_mtsender::InvocationError;
@@ -19,9 +19,11 @@ use crate::attachment_type::AttachmentType;
 use crate::types::{
     chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, Error, FileInfo, MessageInfo,
 };
+use crate::context::Context;
 
 mod attachment_type;
 mod types;
+mod context;
 
 const PATH: &'static str = "backup";
 
@@ -63,6 +65,10 @@ async fn main() {
     let _ = fs::remove_dir_all(PATH);
     fs::create_dir(PATH).unwrap();
 
+    let errors_path_string = format!("{}/errors", PATH);
+    let error_path = Path::new(errors_path_string.as_str());
+    let _ = fs::create_dir(error_path);
+
     let backup_info = save_current_information();
 
     let current_time = backup_info.date;
@@ -80,7 +86,8 @@ async fn main() {
                 // TODO okay, this should be executed in an async manner, but it doesn't work
                 //   not sure why. So let's leave it sync.
                 task::spawn(async move {
-                    extract_dialog(client_handle, chat_index, dialog, current_time).await;
+                    extract_dialog(client_handle, chat_index, dialog, current_time, error_path)
+                        .await;
                 })
                 .await
                 .unwrap();
@@ -101,85 +108,12 @@ fn save_current_information() -> BackUpInfo {
     current_backup_info
 }
 
-const MESSAGES: &'static str = "messages";
-const PHOTO: &'static str = "photo";
-const FILE: &'static str = "file";
-const ROUND: &'static str = "round";
-const VOICE: &'static str = "voice";
-
-const ACCUMULATOR_SIZE: usize = 1_000;
-
-struct Context {
-    types: HashMap<String, AttachmentType>,
-    messages_accumulator: Vec<MessageInfo>,
-    accumulator_counter: i32,
-    errors: Vec<Error>,
-}
-
-impl Context {
-    pub fn init(path: &Path) -> Context {
-        let mut types = Context::init_types();
-        types.values_mut().for_each(|x| x.init_folder(path));
-        Context {
-            types,
-            messages_accumulator: vec![],
-            accumulator_counter: 0,
-            errors: vec![],
-        }
-    }
-
-    fn save_errors(&self, path: &Path, id: i32) {
-        let errors_path = path.join(format!("errors-{}.json", id));
-        let file = File::create(errors_path).unwrap();
-        serde_json::to_writer_pretty(file, &self.errors).unwrap();
-    }
-
-    fn init_types() -> HashMap<String, AttachmentType> {
-        let mut map = HashMap::new();
-        map.insert(
-            MESSAGES.to_string(),
-            AttachmentType::init("messages", MESSAGES, None),
-        );
-        map.insert(
-            PHOTO.to_string(),
-            AttachmentType::init("photos", PHOTO, Some(".jpg")),
-        );
-        map.insert(FILE.to_string(), AttachmentType::init("files", FILE, None));
-        map.insert(
-            ROUND.to_string(),
-            AttachmentType::init("rounds", ROUND, Some(".mp4")),
-        );
-        map.insert(
-            VOICE.to_string(),
-            AttachmentType::init("voice_messages", VOICE, Some(".ogg")),
-        );
-        map
-    }
-
-    fn drop_messages(&mut self) {
-        if self.messages_accumulator.len() < ACCUMULATOR_SIZE {
-            return;
-        }
-        self.force_drop_messages()
-    }
-
-    fn force_drop_messages(&mut self) {
-        let data_type = self.types.get(MESSAGES).unwrap();
-        let messages_path = data_type.path();
-        let file_path = messages_path.join(format!("data-{}.json", self.accumulator_counter));
-        let file = File::create(file_path).unwrap();
-        serde_json::to_writer_pretty(&file, &self.messages_accumulator).unwrap();
-
-        self.messages_accumulator.clear();
-        self.accumulator_counter += 1;
-    }
-}
-
 async fn extract_dialog(
     client_handle: ClientHandle,
     chat_index: i32,
     dialog: Dialog,
     current_time: DateTime<Utc>,
+    error_path: &Path,
 ) {
     let chat = dialog.chat();
 
