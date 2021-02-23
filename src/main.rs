@@ -23,16 +23,6 @@ mod types;
 
 const PATH: &'static str = "backup";
 
-/// Features:
-///  - Support loading of messages only before current start
-///      (do not load messages that where received during backing up)
-///  - Support different message types
-///  - Fix photos loading
-///
-/// Bugs:
-///  - Photos are not loading
-///  - Other attachments don't loading
-
 #[tokio::main]
 async fn main() {
     SimpleLogger::new()
@@ -47,11 +37,8 @@ async fn main() {
 
     let backup_info = save_current_information();
 
-    let current_time = backup_info.date;
-
-    let mut dialogs = client_handle.iter_dialogs();
-
     let mut chat_index = 0;
+    let mut dialogs = client_handle.iter_dialogs();
     loop {
         let dialog_res = dialogs.next().await;
         match dialog_res {
@@ -62,7 +49,7 @@ async fn main() {
                 // TODO okay, this should be executed in an async manner, but it doesn't work
                 //   not sure why. So let's leave it sync.
                 task::spawn(async move {
-                    extract_dialog(client_handle, chat_index, dialog, current_time).await;
+                    extract_dialog(client_handle, chat_index, dialog, backup_info.date).await;
                 })
                 .await
                 .unwrap();
