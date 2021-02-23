@@ -48,8 +48,9 @@ async fn main() {
 
                 // TODO okay, this should be executed in an async manner, but it doesn't work
                 //   not sure why. So let's leave it sync.
+                let date = backup_info.date;
                 task::spawn(async move {
-                    extract_dialog(client_handle, chat_index, dialog, backup_info.date).await;
+                    extract_dialog(client_handle, chat_index, dialog, &date).await;
                 })
                 .await
                 .unwrap();
@@ -74,7 +75,7 @@ async fn extract_dialog(
     client_handle: ClientHandle,
     chat_index: i32,
     dialog: Dialog,
-    current_time: DateTime<Utc>,
+    current_time: &DateTime<Utc>,
 ) {
     let chat = dialog.chat();
 
