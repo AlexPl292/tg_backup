@@ -1,14 +1,15 @@
-use std::collections::HashMap;
 use crate::attachment_type::AttachmentType;
-use crate::types::{MessageInfo, Error};
-use std::path::Path;
+use crate::types::{Error, MessageInfo};
+use std::collections::HashMap;
+use std::fs;
 use std::fs::File;
+use std::path::Path;
 
-const MESSAGES: &'static str = "messages";
-const PHOTO: &'static str = "photo";
-const FILE: &'static str = "file";
-const ROUND: &'static str = "round";
-const VOICE: &'static str = "voice";
+pub const MESSAGES: &'static str = "messages";
+pub const PHOTO: &'static str = "photo";
+pub const FILE: &'static str = "file";
+pub const ROUND: &'static str = "round";
+pub const VOICE: &'static str = "voice";
 
 const ACCUMULATOR_SIZE: usize = 1_000;
 
@@ -31,8 +32,12 @@ impl Context {
         }
     }
 
-    pub(crate) fn save_errors(&self, path: &Path, id: i32) {
-        let errors_path = path.join(format!("errors-{}.json", id));
+    pub(crate) fn save_errors(&self, path: &str, id: i32) {
+        let errors_path_string = format!("{}/errors", path);
+        let error_path = Path::new(errors_path_string.as_str());
+        let _ = fs::create_dir(error_path);
+
+        let errors_path = error_path.join(format!("errors-{}.json", id));
         let file = File::create(errors_path).unwrap();
         serde_json::to_writer_pretty(file, &self.errors).unwrap();
     }

@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::path::Path;
@@ -6,24 +5,21 @@ use std::thread::sleep;
 
 use chrono::{DateTime, Utc};
 use grammers_client::types::photo_sizes::VecExt;
-use grammers_client::types::{Chat, Dialog, Message};
-use grammers_client::{Client, ClientHandle, Config};
+use grammers_client::types::{Dialog, Message};
+use grammers_client::ClientHandle;
 use grammers_mtproto::mtp::RpcError;
 use grammers_mtsender::InvocationError;
-use grammers_session::FileSession;
 use simple_logger::SimpleLogger;
 use tokio::task;
 use tokio::time::Duration;
 
-use crate::attachment_type::AttachmentType;
-use crate::types::{
-    chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, Error, FileInfo, MessageInfo,
-};
-use crate::context::Context;
+use crate::context::{Context, FILE, PHOTO, ROUND, VOICE};
+use crate::types::{chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, Error, FileInfo};
 
 mod attachment_type;
-mod types;
+mod connector;
 mod context;
+mod types;
 
 const PATH: &'static str = "backup";
 
@@ -44,30 +40,10 @@ async fn main() {
         .init()
         .unwrap();
 
-    let api_id = env!("TG_ID").parse().expect("TG_ID invalid");
-    let api_hash = env!("TG_HASH").to_string();
-
-    println!("Connecting to Telegram...");
-    let client = Client::connect(Config {
-        session: FileSession::load_or_create("dialogs.session").unwrap(),
-        api_id,
-        api_hash: api_hash.clone(),
-        params: Default::default(),
-    })
-    .await
-    .unwrap();
-    println!("Connected!");
-
-    let client_handle = client.handle();
-
-    task::spawn(async move { client.run_until_disconnected().await });
+    let client_handle = connector::create_connection().await;
 
     let _ = fs::remove_dir_all(PATH);
     fs::create_dir(PATH).unwrap();
-
-    let errors_path_string = format!("{}/errors", PATH);
-    let error_path = Path::new(errors_path_string.as_str());
-    let _ = fs::create_dir(error_path);
 
     let backup_info = save_current_information();
 
@@ -86,8 +62,7 @@ async fn main() {
                 // TODO okay, this should be executed in an async manner, but it doesn't work
                 //   not sure why. So let's leave it sync.
                 task::spawn(async move {
-                    extract_dialog(client_handle, chat_index, dialog, current_time, error_path)
-                        .await;
+                    extract_dialog(client_handle, chat_index, dialog, current_time).await;
                 })
                 .await
                 .unwrap();
@@ -113,7 +88,6 @@ async fn extract_dialog(
     chat_index: i32,
     dialog: Dialog,
     current_time: DateTime<Utc>,
-    error_path: &Path,
 ) {
     let chat = dialog.chat();
 
@@ -126,10 +100,6 @@ async fn extract_dialog(
         // Save only one-to-one dialogs at the moment
         return;
     } */
-
-    let errors_path_string = format!("{}/errors", PATH);
-    let error_path = Path::new(errors_path_string.as_str());
-    let _ = fs::create_dir(error_path);
 
     let chat_path_string = make_path(chat.name(), chat_index);
     let chat_path = Path::new(chat_path_string.as_str());
@@ -180,7 +150,7 @@ async fn extract_dialog(
             }
         };
     }
-    context.save_errors(error_path, chat.id());
+    context.save_errors(PATH, chat.id());
     context.force_drop_messages();
     log::info!("Finish writing data: {}", chat.name());
 }
