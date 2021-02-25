@@ -15,6 +15,7 @@ use tokio::time::Duration;
 
 use crate::context::{Context, FILE, PHOTO, ROUND, VOICE};
 use crate::types::{chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, Error, FileInfo};
+use std::io::BufReader;
 
 mod attachment_type;
 mod connector;
@@ -32,8 +33,8 @@ async fn main() {
 
     let client_handle = connector::create_connection().await;
 
-    let _ = fs::remove_dir_all(PATH);
-    fs::create_dir(PATH).unwrap();
+    // let _ = fs::remove_dir_all(PATH);
+    let _ = fs::create_dir(PATH);
 
     let backup_info = save_current_information();
 
@@ -91,27 +92,63 @@ async fn extract_dialog(
 
     let chat_path_string = make_path(chat.name(), chat_index);
     let chat_path = Path::new(chat_path_string.as_str());
-    fs::create_dir_all(chat_path).unwrap();
+    let _ = fs::create_dir_all(chat_path);
 
     let info_file_path = chat_path.join("info.json");
+
+    let mut context = Context::init(chat_path);
+    let mut start_loading_time = current_time.clone();
+
+    let in_progress_path = chat_path.join("in_progress");
+    if info_file_path.exists() {
+        if in_progress_path.exists() {
+            // TODO handle unwrap
+            let file = BufReader::new(File::open(&in_progress_path).unwrap());
+            let in_progress_data: (DateTime<Utc>, i32) = serde_json::from_reader(file).unwrap();
+            start_loading_time = in_progress_data.0;
+            context.accumulator_counter = in_progress_data.1;
+        } else {
+            // This loading is finished
+            return;
+        }
+    } else {
+        // Create in progress file
+        let in_progress_file = File::create(&in_progress_path).unwrap();
+        serde_json::to_writer_pretty(
+            &in_progress_file,
+            &(start_loading_time, context.accumulator_counter),
+        )
+        .unwrap();
+    }
+
     let info_file = File::create(info_file_path).unwrap();
     serde_json::to_writer_pretty(&info_file, &chat_to_info(chat)).unwrap();
 
-    let mut context = Context::init(chat_path);
-
     let mut messages = client_handle
         .iter_messages(chat)
-        .offset_date(current_time.timestamp() as i32);
+        .offset_date(start_loading_time.timestamp() as i32);
     let mut last_message: Option<(i32, DateTime<Utc>)> = None;
     loop {
         let msg = messages.next().await;
         match msg {
             Ok(Some(mut message)) => {
                 last_message = Some((message.id(), message.date()));
-                save_message(&mut message, &mut context).await
+                save_message(&mut message, &mut context).await;
+                let dropped = context.drop_messages();
+                if dropped {
+                    let file1 = File::create(&in_progress_path).unwrap();
+                    serde_json::to_writer_pretty(
+                        &file1,
+                        &(last_message.unwrap().1, context.accumulator_counter),
+                    )
+                    .unwrap();
+                }
             }
             Ok(None) => {
-                break;
+                context.force_drop_messages();
+                fs::remove_file(in_progress_path).unwrap();
+                log::info!("Finish writing data: {}", chat.name());
+                return;
             }
             Err(InvocationError::Rpc(RpcError {
                 code: _,
@@ -141,7 +178,13 @@ async fn extract_dialog(
     }
     context.save_errors(PATH, chat.id());
     context.force_drop_messages();
-    log::info!("Finish writing data: {}", chat.name());
+
+    let file1 = File::create(&in_progress_path).unwrap();
+    serde_json::to_writer_pretty(
+        &file1,
+        &(last_message.unwrap().1, context.accumulator_counter),
+    )
+    .unwrap();
 }
 
 async fn save_message(message: &mut Message, context: &mut Context) {
@@ -204,7 +247,6 @@ async fn save_message(message: &mut Message, context: &mut Context) {
         // log::info!("Loading no message {}", message.text());
         context.messages_accumulator.push(msg_to_info(message));
     }
-    context.drop_messages();
 }
 
 fn make_path(name: &str, id: i32) -> String {

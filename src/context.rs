@@ -16,7 +16,7 @@ const ACCUMULATOR_SIZE: usize = 1_000;
 pub struct Context {
     pub(crate) types: HashMap<String, AttachmentType>,
     pub(crate) messages_accumulator: Vec<MessageInfo>,
-    accumulator_counter: i32,
+    pub(crate) accumulator_counter: i32,
     pub(crate) errors: Vec<Error>,
 }
 
@@ -64,11 +64,12 @@ impl Context {
         map
     }
 
-    pub(crate) fn drop_messages(&mut self) {
+    pub(crate) fn drop_messages(&mut self) -> bool {
         if self.messages_accumulator.len() < ACCUMULATOR_SIZE {
-            return;
+            return false;
         }
-        self.force_drop_messages()
+        self.force_drop_messages();
+        return true;
     }
 
     pub(crate) fn force_drop_messages(&mut self) {
