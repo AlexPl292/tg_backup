@@ -38,20 +38,18 @@ async fn main() {
 
     let backup_info = save_current_information();
 
-    let mut chat_index = 0;
     let mut dialogs = client_handle.iter_dialogs();
     loop {
         let dialog_res = dialogs.next().await;
         match dialog_res {
             Ok(Some(dialog)) => {
-                chat_index += 1;
                 let client_handle = client_handle.clone();
 
                 // TODO okay, this should be executed in an async manner, but it doesn't work
                 //   not sure why. So let's leave it sync.
                 let date = backup_info.date;
                 task::spawn(async move {
-                    extract_dialog(client_handle, chat_index, dialog, &date).await;
+                    extract_dialog(client_handle, dialog, &date).await;
                 })
                 .await
                 .unwrap();
@@ -74,7 +72,6 @@ fn save_current_information() -> BackUpInfo {
 
 async fn extract_dialog(
     client_handle: ClientHandle,
-    chat_index: i32,
     dialog: Dialog,
     current_time: &DateTime<Utc>,
 ) {
@@ -90,7 +87,7 @@ async fn extract_dialog(
         return;
     } */
 
-    let chat_path_string = make_path(chat.name(), chat_index);
+    let chat_path_string = make_path(chat.id(), chat.name());
     let chat_path = Path::new(chat_path_string.as_str());
     let _ = fs::create_dir_all(chat_path);
 
@@ -249,6 +246,6 @@ async fn save_message(message: &mut Message, context: &mut Context) {
     }
 }
 
-fn make_path(name: &str, id: i32) -> String {
+fn make_path(id: i32, name: &str) -> String {
     return format!("{}/chats/{}.{}", PATH, id, name);
 }
