@@ -9,13 +9,14 @@ use grammers_client::ClientHandle;
 use grammers_client::types::{Dialog, Message};
 use grammers_client::types::photo_sizes::VecExt;
 use grammers_mtproto::mtp::RpcError;
-use grammers_mtsender::InvocationError;
+use grammers_mtsender::{InvocationError, ReadError};
 use simple_logger::SimpleLogger;
 use tokio::task;
 use tokio::time::Duration;
 
 use crate::context::{Context, FILE, PHOTO, ROUND, VOICE};
 use crate::types::{BackUpInfo, chat_to_info, Error, FileInfo, msg_to_file_info, msg_to_info};
+use tokio::task::JoinHandle;
 
 mod attachment_type;
 mod connector;
@@ -39,7 +40,7 @@ async fn main() {
 
     let mut finish_loop = false;
     while !finish_loop {
-        let (client_handle, main_handle) = connector::create_connection().await;
+        let (client_handle, main_handle) = get_connection().await;
 
         start_iteration(client_handle, &backup_info).await;
 
@@ -53,6 +54,25 @@ async fn main() {
                 finish_loop = false
             },
         }
+    }
+}
+
+async fn get_connection() -> (ClientHandle, JoinHandle<Result<(), ReadError>>) {
+    let mut counter = 0;
+    loop {
+        let connect = connector::create_connection().await;
+        if let Ok((handle, main_loop)) = connect {
+            return (handle, main_loop)
+        }
+        counter += 1;
+        let time_sec = if counter < 5 {
+            counter * 5
+        } else if counter < 10 {
+            counter * 10
+        } else {
+            panic!("Cannot connect to telegram")
+        };
+        sleep(Duration::from_secs(time_sec))
     }
 }
 
