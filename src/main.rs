@@ -40,11 +40,11 @@ async fn main() {
 
     let mut finish_loop = false;
     while !finish_loop {
-        let (client_handle, main_handle) = get_connection().await;
+        let (client_handle, _main_handle) = get_connection().await;
 
-        start_iteration(client_handle, &backup_info).await;
+        let result = start_iteration(client_handle, &backup_info).await;
 
-        match main_handle.await.unwrap() {
+        match result {
             Ok(_) => {
                 println!("Finish");
                 finish_loop = true
@@ -76,7 +76,7 @@ async fn get_connection() -> (ClientHandle, JoinHandle<Result<(), ReadError>>) {
     }
 }
 
-async fn start_iteration(client_handle: ClientHandle, backup_info: &BackUpInfo) {
+async fn start_iteration(client_handle: ClientHandle, backup_info: &BackUpInfo) -> Result<(), ()> {
     let mut dialogs = client_handle.iter_dialogs();
     loop {
         let dialog_res = dialogs.next().await;
@@ -93,10 +93,10 @@ async fn start_iteration(client_handle: ClientHandle, backup_info: &BackUpInfo) 
                     .await
                     .unwrap();
             }
-            Ok(None) => break,
+            Ok(None) => return Ok(()),
             Err(e) => {
                 log::error!("{}", e);
-                break;
+                return Err(());
             }
         };
     }
@@ -117,7 +117,7 @@ async fn extract_dialog(
     let chat = dialog.chat();
 
     // println!("{}/{}", dialog.chat.name(), dialog.chat.id());
-    if dialog.chat.id() != 59061750 {
+    if dialog.chat.id() != 422281 {
         return;
     }
     /*    if let Chat::User(_) = chat {
