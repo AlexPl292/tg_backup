@@ -1,8 +1,10 @@
 use grammers_client::{Client, ClientHandle, Config};
 use grammers_session::FileSession;
 use tokio::task;
+use grammers_mtsender::ReadError;
+use tokio::task::JoinHandle;
 
-pub async fn create_connection() -> ClientHandle {
+pub async fn create_connection() -> (ClientHandle, JoinHandle<Result<(), ReadError>>) {
     let api_id = env!("TG_ID").parse().expect("TG_ID invalid");
     let api_hash = env!("TG_HASH").to_string();
 
@@ -19,6 +21,6 @@ pub async fn create_connection() -> ClientHandle {
 
     let client_handle = client.handle();
 
-    task::spawn(async move { client.run_until_disconnected().await });
-    client_handle
+    let main_handle = task::spawn(async move { client.run_until_disconnected().await });
+    (client_handle, main_handle)
 }

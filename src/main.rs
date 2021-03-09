@@ -1,12 +1,13 @@
 use std::fs;
 use std::fs::File;
+use std::io::BufReader;
 use std::path::Path;
 use std::thread::sleep;
 
 use chrono::{DateTime, Utc};
-use grammers_client::types::photo_sizes::VecExt;
-use grammers_client::types::{Dialog, Message};
 use grammers_client::ClientHandle;
+use grammers_client::types::{Dialog, Message};
+use grammers_client::types::photo_sizes::VecExt;
 use grammers_mtproto::mtp::RpcError;
 use grammers_mtsender::InvocationError;
 use simple_logger::SimpleLogger;
@@ -14,8 +15,7 @@ use tokio::task;
 use tokio::time::Duration;
 
 use crate::context::{Context, FILE, PHOTO, ROUND, VOICE};
-use crate::types::{chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, Error, FileInfo};
-use std::io::BufReader;
+use crate::types::{BackUpInfo, chat_to_info, Error, FileInfo, msg_to_file_info, msg_to_info};
 
 mod attachment_type;
 mod connector;
@@ -31,13 +31,32 @@ async fn main() {
         .init()
         .unwrap();
 
-    let client_handle = connector::create_connection().await;
 
     // let _ = fs::remove_dir_all(PATH);
     let _ = fs::create_dir(PATH);
 
     let backup_info = save_current_information();
 
+    let mut finish_loop = false;
+    while !finish_loop {
+        let (client_handle, main_handle) = connector::create_connection().await;
+
+        start_iteration(client_handle, &backup_info).await;
+
+        match main_handle.await.unwrap() {
+            Ok(_) => {
+                println!("Finish");
+                finish_loop = true
+            },
+            Err(_) => {
+                println!("Continue");
+                finish_loop = false
+            },
+        }
+    }
+}
+
+async fn start_iteration(client_handle: ClientHandle, backup_info: &BackUpInfo) {
     let mut dialogs = client_handle.iter_dialogs();
     loop {
         let dialog_res = dialogs.next().await;
@@ -51,8 +70,8 @@ async fn main() {
                 task::spawn(async move {
                     extract_dialog(client_handle, dialog, &date).await;
                 })
-                .await
-                .unwrap();
+                    .await
+                    .unwrap();
             }
             Ok(None) => break,
             Err(e) => {
