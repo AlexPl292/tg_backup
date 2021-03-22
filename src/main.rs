@@ -87,11 +87,14 @@ async fn start_iteration(client_handle: ClientHandle, backup_info: &BackUpInfo) 
                 // TODO okay, this should be executed in an async manner, but it doesn't work
                 //   not sure why. So let's leave it sync.
                 let date = backup_info.date;
-                task::spawn(async move {
+                let result = task::spawn(async move {
                     extract_dialog(client_handle, dialog, &date).await;
                 })
                     .await
                     .unwrap();
+                if let Err(_) = result {
+                    return Err(());
+                }
             }
             Ok(None) => return Ok(()),
             Err(e) => {
@@ -113,12 +116,12 @@ async fn extract_dialog(
     client_handle: ClientHandle,
     dialog: Dialog,
     current_time: &DateTime<Utc>,
-) {
+) -> Result<(), ()> {
     let chat = dialog.chat();
 
     // println!("{}/{}", dialog.chat.name(), dialog.chat.id());
     if dialog.chat.id() != 422281 {
-        return;
+        return Ok(());
     }
     /*    if let Chat::User(_) = chat {
     } else {
@@ -145,7 +148,7 @@ async fn extract_dialog(
             context.accumulator_counter = in_progress_data.1;
         } else {
             // This loading is finished
-            return;
+            return Ok(());
         }
     } else {
         // Create in progress file
@@ -169,7 +172,10 @@ async fn extract_dialog(
         match msg {
             Ok(Some(mut message)) => {
                 last_message = Some((message.id(), message.date()));
-                save_message(&mut message, &mut context).await;
+                let saving_result = save_message(&mut message, &mut context).await;
+                if let Err(_) = saving_result {
+                    return Err(())
+                }
                 let dropped = context.drop_messages();
                 if dropped {
                     let file1 = File::create(&in_progress_path).unwrap();
@@ -184,7 +190,7 @@ async fn extract_dialog(
                 context.force_drop_messages();
                 fs::remove_file(in_progress_path).unwrap();
                 log::info!("Finish writing data: {}", chat.name());
-                return;
+                return Ok(());
             }
             Err(InvocationError::Rpc(RpcError {
                 code: _,
@@ -221,9 +227,10 @@ async fn extract_dialog(
         &(last_message.unwrap().1, context.accumulator_counter),
     )
     .unwrap();
+    Ok(())
 }
 
-async fn save_message(message: &mut Message, context: &mut Context) {
+async fn save_message(message: &mut Message, context: &mut Context) -> Result<(), ()> {
     let types = &context.types;
     let res = if let Some(photo) = message.photo() {
         log::info!("Loading photo {}", message.text());
@@ -233,7 +240,8 @@ async fn save_message(message: &mut Message, context: &mut Context) {
             Some(id) => id,
             None => {
                 log::error!("Cannot get photo id");
-                return;
+                // TODO not really ok
+                return Ok(());
             }
         };
         let file_name = format!("photo@{}.jpg", id);
@@ -242,9 +250,8 @@ async fn save_message(message: &mut Message, context: &mut Context) {
         let first = thumbs.largest();
         let downloaded = first.unwrap().download(&photos_path).await;
         if let Err(_) = downloaded {
-            // TODO process it in a better way
             log::error!("Cannot download photo");
-            None
+            return Err(())
         } else {
             Some((att_type, file_name, id))
         }
@@ -279,9 +286,11 @@ async fn save_message(message: &mut Message, context: &mut Context) {
         };
         let message_info = msg_to_file_info(&message, attachment_info);
         context.messages_accumulator.push(message_info);
+        Ok(())
     } else {
         // log::info!("Loading no message {}", message.text());
         context.messages_accumulator.push(msg_to_info(message));
+        Ok(())
     }
 }
 
