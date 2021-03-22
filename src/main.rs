@@ -1,4 +1,4 @@
-use std::{fs, env};
+use std::{env, fs};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
@@ -6,17 +6,17 @@ use std::thread::sleep;
 
 use chrono::{DateTime, Utc};
 use grammers_client::ClientHandle;
-use grammers_client::types::{Dialog, Message};
+use grammers_client::types::{Chat, Dialog, Message};
 use grammers_client::types::photo_sizes::VecExt;
 use grammers_mtproto::mtp::RpcError;
 use grammers_mtsender::{InvocationError, ReadError};
 use simple_logger::SimpleLogger;
 use tokio::task;
+use tokio::task::JoinHandle;
 use tokio::time::Duration;
 
 use crate::context::{Context, FILE, PHOTO, ROUND, VOICE};
 use crate::types::{BackUpInfo, chat_to_info, Error, FileInfo, msg_to_file_info, msg_to_info};
-use tokio::task::JoinHandle;
 
 mod attachment_type;
 mod connector;
@@ -51,11 +51,11 @@ async fn main() {
             Ok(_) => {
                 println!("Finish");
                 finish_loop = true
-            },
+            }
             Err(_) => {
                 println!("Continue");
                 finish_loop = false
-            },
+            }
         }
     }
 }
@@ -65,7 +65,7 @@ async fn get_connection() -> (ClientHandle, JoinHandle<Result<(), ReadError>>) {
     loop {
         let connect = connector::create_connection().await;
         if let Ok((handle, main_loop)) = connect {
-            return (handle, main_loop)
+            return (handle, main_loop);
         }
         counter += 1;
         let time_sec = if counter < 5 {
@@ -126,14 +126,14 @@ async fn extract_dialog(
     // println!("{}/{}", dialog.chat.name(), dialog.chat.id());
     if let Some(chats) = backup_info.loading_chats {
         if !chats.contains(&dialog.chat.id()) {
-            return Ok(())
+            return Ok(());
         }
     }
-    /*    if let Chat::User(_) = chat {
-    } else {
+
+    if let Chat::User(_) = chat {} else {
         // Save only one-to-one dialogs at the moment
-        return;
-    } */
+        return Ok(());
+    }
 
     let chat_path_string = make_path(chat.id(), chat.name());
     let chat_path = Path::new(chat_path_string.as_str());
@@ -163,7 +163,7 @@ async fn extract_dialog(
             &in_progress_file,
             &(start_loading_time, context.accumulator_counter),
         )
-        .unwrap();
+            .unwrap();
     }
 
     let info_file = File::create(info_file_path).unwrap();
@@ -180,7 +180,7 @@ async fn extract_dialog(
                 last_message = Some((message.id(), message.date()));
                 let saving_result = save_message(&mut message, &mut context).await;
                 if let Err(_) = saving_result {
-                    return Err(())
+                    return Err(());
                 }
                 let dropped = context.drop_messages();
                 if dropped {
@@ -189,7 +189,7 @@ async fn extract_dialog(
                         &file1,
                         &(last_message.unwrap().1, context.accumulator_counter),
                     )
-                    .unwrap();
+                        .unwrap();
                 }
             }
             Ok(None) => {
@@ -199,10 +199,10 @@ async fn extract_dialog(
                 return Ok(());
             }
             Err(InvocationError::Rpc(RpcError {
-                code: _,
-                name,
-                value,
-            })) => {
+                                         code: _,
+                                         name,
+                                         value,
+                                     })) => {
                 if name == "FLOOD_WAIT" {
                     log::warn!("Flood wait: {}", value.unwrap());
                     sleep(Duration::from_secs(value.unwrap() as u64))
@@ -232,7 +232,7 @@ async fn extract_dialog(
         &file1,
         &(last_message.unwrap().1, context.accumulator_counter),
     )
-    .unwrap();
+        .unwrap();
     Ok(())
 }
 
@@ -257,7 +257,7 @@ async fn save_message(message: &mut Message, context: &mut Context) -> Result<()
         let downloaded = first.unwrap().download(&photos_path).await;
         if let Err(_) = downloaded {
             log::error!("Cannot download photo");
-            return Err(())
+            return Err(());
         } else {
             Some((att_type, file_name, id))
         }
