@@ -11,7 +11,7 @@ pub const FILE: &'static str = "file";
 pub const ROUND: &'static str = "round";
 pub const VOICE: &'static str = "voice";
 
-const ACCUMULATOR_SIZE: usize = 1_000;
+pub(crate) const ACCUMULATOR_SIZE: usize = 1_000;
 
 pub struct Context {
     pub(crate) types: HashMap<String, AttachmentType>,

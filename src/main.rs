@@ -15,7 +15,7 @@ use tokio::task;
 use tokio::task::JoinHandle;
 use tokio::time::Duration;
 
-use crate::context::{Context, FILE, PHOTO, ROUND, VOICE};
+use crate::context::{Context, ACCUMULATOR_SIZE, FILE, PHOTO, ROUND, VOICE};
 use crate::types::{chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, Error, FileInfo};
 
 mod attachment_type;
@@ -28,7 +28,7 @@ const PATH: &'static str = "backup";
 #[tokio::main]
 async fn main() {
     SimpleLogger::new()
-        .with_level(log::LevelFilter::Info)
+        .with_level(log::LevelFilter::Debug)
         .init()
         .unwrap();
 
@@ -176,15 +176,19 @@ async fn extract_dialog(
         .iter_messages(chat)
         .offset_date(start_loading_time.timestamp() as i32);
     let mut last_message: Option<(i32, DateTime<Utc>)> = None;
+    let total_messages = messages.total().await.unwrap_or(0);
+    let mut counter = context.accumulator_counter * ACCUMULATOR_SIZE;
     loop {
         let msg = messages.next().await;
         match msg {
             Ok(Some(mut message)) => {
+                counter += 1;
                 last_message = Some((message.id(), message.date()));
                 let saving_result = save_message(&mut message, &mut context).await;
                 if let Err(_) = saving_result {
                     return Err(());
                 }
+                log::info!("Loaded {}/{}", counter, total_messages);
                 let dropped = context.drop_messages();
                 if dropped {
                     let file1 = File::create(&in_progress_path).unwrap();
@@ -262,6 +266,7 @@ async fn save_message(message: &mut Message, context: &mut Context) -> Result<()
             log::error!("Cannot download photo");
             return Err(());
         } else {
+            log::info!("Loaded");
             Some((att_type, file_name, id))
         }
     } else if let Some(doc) = message.document() {
@@ -276,10 +281,14 @@ async fn save_message(message: &mut Message, context: &mut Context) -> Result<()
             types.get(FILE).unwrap()
         };
 
-        let file_name = doc.name().unwrap_or(doc.id().to_string());
+        let mut file_name = doc.name().to_string();
+        if file_name.is_empty() {
+            file_name = doc.id().to_string();
+        }
         let file_name = current_type.format(file_name);
         let file_path = current_type.path().join(file_name.as_str());
         doc.download(&file_path).await;
+        log::info!("Loaded");
         Some((current_type, file_name, doc.id()))
     } else {
         None
