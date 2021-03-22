@@ -33,6 +33,16 @@ const PATH: &'static str = "backup";
 async fn main() {
     let opts: Opts = Opts::parse();
 
+    if let Some(_) = opts.auth {
+        connector::auth().await;
+        return;
+    }
+
+    if connector::need_auth() {
+        println!("Start tg_backup with `auth` command");
+        return;
+    }
+
     SimpleLogger::new()
         .with_level(log::LevelFilter::Debug)
         .init()
