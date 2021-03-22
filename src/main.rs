@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, env};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
@@ -36,7 +36,10 @@ async fn main() {
     // let _ = fs::remove_dir_all(PATH);
     let _ = fs::create_dir(PATH);
 
-    let backup_info = save_current_information();
+    let all_arguments: Vec<String> = env::args().collect();
+    let chats: Vec<i32> = all_arguments[1..].iter().filter_map(|x| x.parse::<i32>().ok()).collect();
+
+    let backup_info = save_current_information(chats);
 
     let mut finish_loop = false;
     while !finish_loop {
@@ -86,9 +89,9 @@ async fn start_iteration(client_handle: ClientHandle, backup_info: &BackUpInfo) 
 
                 // TODO okay, this should be executed in an async manner, but it doesn't work
                 //   not sure why. So let's leave it sync.
-                let date = backup_info.date;
+                let my_backup_info = (*backup_info).clone();
                 let result = task::spawn(async move {
-                    extract_dialog(client_handle, dialog, &date).await;
+                    extract_dialog(client_handle, dialog, my_backup_info).await
                 })
                     .await
                     .unwrap();
@@ -105,8 +108,9 @@ async fn start_iteration(client_handle: ClientHandle, backup_info: &BackUpInfo) 
     }
 }
 
-fn save_current_information() -> BackUpInfo {
-    let current_backup_info = BackUpInfo::current_info();
+fn save_current_information(chats: Vec<i32>) -> BackUpInfo {
+    let loading_chats = if chats.is_empty() { None } else { Some(chats) };
+    let current_backup_info = BackUpInfo::current_info(loading_chats);
     let file = File::create(format!("{}/backup.json", PATH)).unwrap();
     serde_json::to_writer_pretty(&file, &current_backup_info).unwrap();
     current_backup_info
@@ -115,13 +119,15 @@ fn save_current_information() -> BackUpInfo {
 async fn extract_dialog(
     client_handle: ClientHandle,
     dialog: Dialog,
-    current_time: &DateTime<Utc>,
+    backup_info: BackUpInfo,
 ) -> Result<(), ()> {
     let chat = dialog.chat();
 
     // println!("{}/{}", dialog.chat.name(), dialog.chat.id());
-    if dialog.chat.id() != 422281 {
-        return Ok(());
+    if let Some(chats) = backup_info.loading_chats {
+        if !chats.contains(&dialog.chat.id()) {
+            return Ok(())
+        }
     }
     /*    if let Chat::User(_) = chat {
     } else {
@@ -136,7 +142,7 @@ async fn extract_dialog(
     let info_file_path = chat_path.join("info.json");
 
     let mut context = Context::init(chat_path);
-    let mut start_loading_time = current_time.clone();
+    let mut start_loading_time = backup_info.date.clone();
 
     let in_progress_path = chat_path.join("in_progress");
     if info_file_path.exists() {
