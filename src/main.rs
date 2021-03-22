@@ -222,10 +222,12 @@ async fn extract_dialog(
     }
     context.force_drop_messages();
 
-    in_progress.write_data(InProgressInfo {
-        extract_from: last_message.unwrap().1,
-        accumulator_counter: context.accumulator_counter,
-    });
+    if let Some(message) = last_message {
+        in_progress.write_data(InProgressInfo {
+            extract_from: message.1,
+            accumulator_counter: context.accumulator_counter,
+        });
+    }
     Ok(())
 }
 
