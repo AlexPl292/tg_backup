@@ -17,7 +17,7 @@ use tokio::time::Duration;
 
 use crate::context::{Context, ACCUMULATOR_SIZE, FILE, PHOTO, ROUND, VOICE};
 use crate::opts::Opts;
-use crate::types::{chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, Error, FileInfo};
+use crate::types::{chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, FileInfo};
 use clap::Clap;
 
 mod attachment_type;
@@ -215,22 +215,15 @@ async fn extract_dialog(
                 } else if name == "FILE_MIGRATE" {
                     log::warn!("File migrate: {}", value.unwrap());
                 } else {
-                    if let Some((id, date)) = last_message {
-                        context.errors.push(Error::NotFullLoading(id, date));
-                    }
                     break;
                 }
             }
             Err(e) => {
                 log::error!("Error {}", e);
-                if let Some((id, date)) = last_message {
-                    context.errors.push(Error::NotFullLoading(id, date));
-                }
                 break;
             }
         };
     }
-    context.save_errors(PATH, chat.id());
     context.force_drop_messages();
 
     let file1 = File::create(&in_progress_path).unwrap();

@@ -63,8 +63,3 @@ impl BackUpInfo {
         }
     }
 }
-
-#[derive(Serialize, Deserialize)]
-pub enum Error {
-    NotFullLoading(i32, DateTime<Utc>),
-}

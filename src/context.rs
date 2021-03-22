@@ -1,7 +1,6 @@
 use crate::attachment_type::AttachmentType;
-use crate::types::{Error, MessageInfo};
+use crate::types::MessageInfo;
 use std::collections::HashMap;
-use std::fs;
 use std::fs::File;
 use std::path::Path;
 
@@ -17,7 +16,6 @@ pub struct Context {
     pub(crate) types: HashMap<String, AttachmentType>,
     pub(crate) messages_accumulator: Vec<MessageInfo>,
     pub(crate) accumulator_counter: i32,
-    pub(crate) errors: Vec<Error>,
 }
 
 impl Context {
@@ -28,18 +26,7 @@ impl Context {
             types,
             messages_accumulator: vec![],
             accumulator_counter: 0,
-            errors: vec![],
         }
-    }
-
-    pub(crate) fn save_errors(&self, path: &str, id: i32) {
-        let errors_path_string = format!("{}/errors", path);
-        let error_path = Path::new(errors_path_string.as_str());
-        let _ = fs::create_dir(error_path);
-
-        let errors_path = error_path.join(format!("errors-{}.json", id));
-        let file = File::create(errors_path).unwrap();
-        serde_json::to_writer_pretty(file, &self.errors).unwrap();
     }
 
     fn init_types() -> HashMap<String, AttachmentType> {
