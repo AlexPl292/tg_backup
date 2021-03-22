@@ -1,8 +1,8 @@
+use std::fs;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 use std::thread::sleep;
-use std::{env, fs};
 
 use chrono::{DateTime, Utc};
 use grammers_client::types::photo_sizes::VecExt;
@@ -16,17 +16,22 @@ use tokio::task::JoinHandle;
 use tokio::time::Duration;
 
 use crate::context::{Context, ACCUMULATOR_SIZE, FILE, PHOTO, ROUND, VOICE};
+use crate::opts::Opts;
 use crate::types::{chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, Error, FileInfo};
+use clap::Clap;
 
 mod attachment_type;
 mod connector;
 mod context;
+mod opts;
 mod types;
 
 const PATH: &'static str = "backup";
 
 #[tokio::main]
 async fn main() {
+    let _opts: Opts = Opts::parse();
+
     SimpleLogger::new()
         .with_level(log::LevelFilter::Debug)
         .init()
@@ -35,13 +40,7 @@ async fn main() {
     // let _ = fs::remove_dir_all(PATH);
     let _ = fs::create_dir(PATH);
 
-    let all_arguments: Vec<String> = env::args().collect();
-    let chats: Vec<i32> = all_arguments[1..]
-        .iter()
-        .filter_map(|x| x.parse::<i32>().ok())
-        .collect();
-
-    let backup_info = save_current_information(chats);
+    let backup_info = save_current_information(_opts.included_chats);
 
     let mut finish_loop = false;
     while !finish_loop {
@@ -177,7 +176,7 @@ async fn extract_dialog(
         .offset_date(start_loading_time.timestamp() as i32);
     let mut last_message: Option<(i32, DateTime<Utc>)> = None;
     let total_messages = messages.total().await.unwrap_or(0);
-    let mut counter = context.accumulator_counter * ACCUMULATOR_SIZE;
+    let mut counter = context.accumulator_counter * ACCUMULATOR_SIZE as i32;
     loop {
         let msg = messages.next().await;
         match msg {
