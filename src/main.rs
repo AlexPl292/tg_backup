@@ -31,7 +31,7 @@ const PATH: &'static str = "backup";
 
 #[tokio::main]
 async fn main() {
-    let _opts: Opts = Opts::parse();
+    let opts: Opts = Opts::parse();
 
     SimpleLogger::new()
         .with_level(log::LevelFilter::Debug)
@@ -41,7 +41,7 @@ async fn main() {
     // let _ = fs::remove_dir_all(PATH);
     let _ = fs::create_dir(PATH);
 
-    let backup_info = save_current_information(_opts.included_chats);
+    let backup_info = save_current_information(opts.included_chats);
 
     let mut finish_loop = false;
     while !finish_loop {
