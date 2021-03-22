@@ -15,17 +15,17 @@ use tokio::task::JoinHandle;
 use tokio::time::Duration;
 
 use crate::context::{Context, ACCUMULATOR_SIZE, FILE, PHOTO, ROUND, VOICE};
+use crate::in_progress::{InProgress, InProgressInfo};
 use crate::opts::Opts;
 use crate::types::{chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, FileInfo};
 use clap::Clap;
-use crate::in_progress::{InProgress, InProgressInfo};
 
 mod attachment_type;
 mod connector;
 mod context;
+mod in_progress;
 mod opts;
 mod types;
-mod in_progress;
 
 const PATH: &'static str = "backup";
 
@@ -160,10 +160,7 @@ async fn extract_dialog(
         }
     } else {
         // Create in progress file
-        in_progress.write_data(InProgressInfo {
-            extract_from: start_loading_time,
-            accumulator_counter: context.accumulator_counter,
-        });
+        in_progress.write_data(InProgressInfo::create(start_loading_time, &context));
     }
 
     let info_file = File::create(info_file_path).unwrap();
@@ -188,10 +185,8 @@ async fn extract_dialog(
                 log::info!("Loaded {}/{}", counter, total_messages);
                 let dropped = context.drop_messages();
                 if dropped {
-                    in_progress.write_data(InProgressInfo {
-                        accumulator_counter: context.accumulator_counter,
-                        extract_from: last_message.unwrap().1,
-                    });
+                    in_progress
+                        .write_data(InProgressInfo::create(last_message.unwrap().1, &context));
                 }
             }
             Ok(None) => {
@@ -220,14 +215,12 @@ async fn extract_dialog(
             }
         };
     }
-    context.force_drop_messages();
 
     if let Some(message) = last_message {
-        in_progress.write_data(InProgressInfo {
-            extract_from: message.1,
-            accumulator_counter: context.accumulator_counter,
-        });
+        in_progress.write_data(InProgressInfo::create(message.1, &context));
     }
+
+    context.force_drop_messages();
     Ok(())
 }
 
