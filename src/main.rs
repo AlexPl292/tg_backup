@@ -1,13 +1,13 @@
-use std::{env, fs};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 use std::thread::sleep;
+use std::{env, fs};
 
 use chrono::{DateTime, Utc};
-use grammers_client::ClientHandle;
-use grammers_client::types::{Chat, Dialog, Message};
 use grammers_client::types::photo_sizes::VecExt;
+use grammers_client::types::{Chat, Dialog, Message};
+use grammers_client::ClientHandle;
 use grammers_mtproto::mtp::RpcError;
 use grammers_mtsender::{InvocationError, ReadError};
 use simple_logger::SimpleLogger;
@@ -16,7 +16,7 @@ use tokio::task::JoinHandle;
 use tokio::time::Duration;
 
 use crate::context::{Context, FILE, PHOTO, ROUND, VOICE};
-use crate::types::{BackUpInfo, chat_to_info, Error, FileInfo, msg_to_file_info, msg_to_info};
+use crate::types::{chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, Error, FileInfo};
 
 mod attachment_type;
 mod connector;
@@ -32,12 +32,14 @@ async fn main() {
         .init()
         .unwrap();
 
-
     // let _ = fs::remove_dir_all(PATH);
     let _ = fs::create_dir(PATH);
 
     let all_arguments: Vec<String> = env::args().collect();
-    let chats: Vec<i32> = all_arguments[1..].iter().filter_map(|x| x.parse::<i32>().ok()).collect();
+    let chats: Vec<i32> = all_arguments[1..]
+        .iter()
+        .filter_map(|x| x.parse::<i32>().ok())
+        .collect();
 
     let backup_info = save_current_information(chats);
 
@@ -93,8 +95,8 @@ async fn start_iteration(client_handle: ClientHandle, backup_info: &BackUpInfo) 
                 let result = task::spawn(async move {
                     extract_dialog(client_handle, dialog, my_backup_info).await
                 })
-                    .await
-                    .unwrap();
+                .await
+                .unwrap();
                 if let Err(_) = result {
                     return Err(());
                 }
@@ -130,7 +132,8 @@ async fn extract_dialog(
         }
     }
 
-    if let Chat::User(_) = chat {} else {
+    if let Chat::User(_) = chat {
+    } else {
         // Save only one-to-one dialogs at the moment
         return Ok(());
     }
@@ -163,7 +166,7 @@ async fn extract_dialog(
             &in_progress_file,
             &(start_loading_time, context.accumulator_counter),
         )
-            .unwrap();
+        .unwrap();
     }
 
     let info_file = File::create(info_file_path).unwrap();
@@ -189,7 +192,7 @@ async fn extract_dialog(
                         &file1,
                         &(last_message.unwrap().1, context.accumulator_counter),
                     )
-                        .unwrap();
+                    .unwrap();
                 }
             }
             Ok(None) => {
@@ -199,10 +202,10 @@ async fn extract_dialog(
                 return Ok(());
             }
             Err(InvocationError::Rpc(RpcError {
-                                         code: _,
-                                         name,
-                                         value,
-                                     })) => {
+                code: _,
+                name,
+                value,
+            })) => {
                 if name == "FLOOD_WAIT" {
                     log::warn!("Flood wait: {}", value.unwrap());
                     sleep(Duration::from_secs(value.unwrap() as u64))
@@ -232,7 +235,7 @@ async fn extract_dialog(
         &file1,
         &(last_message.unwrap().1, context.accumulator_counter),
     )
-        .unwrap();
+    .unwrap();
     Ok(())
 }
 

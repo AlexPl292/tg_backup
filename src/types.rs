@@ -59,7 +59,7 @@ impl BackUpInfo {
     pub fn current_info(loading_chats: Option<Vec<i32>>) -> BackUpInfo {
         BackUpInfo {
             date: chrono::offset::Utc::now(),
-            loading_chats
+            loading_chats,
         }
     }
 }
