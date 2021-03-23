@@ -9,6 +9,7 @@ async fn test_loading() {
     start_backup(Opts {
         included_chats: vec![1707414104],
         batch_size: 5,
+        clean: true,
         auth: None,
     }).await;
 

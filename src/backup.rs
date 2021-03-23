@@ -32,7 +32,9 @@ pub async fn start_backup(opts: Opts) {
         return;
     }
 
-    // let _ = fs::remove_dir_all(PATH);
+    if opts.clean {
+        let _ = fs::remove_dir_all(PATH);
+    }
     let _ = fs::create_dir(PATH);
 
     let backup_info = save_current_information(opts.included_chats, opts.batch_size);
