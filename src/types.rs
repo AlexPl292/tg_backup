@@ -13,7 +13,7 @@ pub struct ChatInfo {
 pub struct MessageInfo {
     text: String,
     id: i32,
-    date: DateTime<Utc>,
+    pub date: DateTime<Utc>,
     attachment: Option<FileInfo>,
 }
 

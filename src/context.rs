@@ -1,8 +1,9 @@
-use crate::attachment_type::AttachmentType;
-use crate::types::{MessageInfo, BackUpInfo};
 use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
+
+use crate::attachment_type::AttachmentType;
+use crate::types::{BackUpInfo, MessageInfo};
 
 pub const MESSAGES: &'static str = "messages";
 pub const PHOTO: &'static str = "photo";
@@ -58,9 +59,22 @@ impl Context {
     }
 
     pub(crate) fn force_drop_messages(&mut self) {
+        if self.messages_accumulator.is_empty() {
+            return;
+        }
+
         let data_type = self.types.get(MESSAGES).unwrap();
         let messages_path = data_type.path();
-        let file_path = messages_path.join(format!("data-{}.json", self.accumulator_counter));
+        let first_msg = self.messages_accumulator.first().unwrap().date.format("%Y%m%d");
+        let last_msg = self.messages_accumulator.last().unwrap().date.format("%Y%m%d");
+        let mut file_path = messages_path.join(format!("data-{}-{}.json", first_msg, last_msg));
+
+        let mut counter = 0;
+        while file_path.exists() {
+            file_path = messages_path.join(format!("data-{}-{}-{}.json", first_msg, last_msg, counter));
+            counter+=1;
+        }
+
         let file = File::create(file_path).unwrap();
         serde_json::to_writer_pretty(&file, &self.messages_accumulator).unwrap();
 
