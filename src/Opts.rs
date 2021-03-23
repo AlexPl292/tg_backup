@@ -5,6 +5,8 @@ use clap::Clap;
 pub struct Opts {
     #[clap(short, long)]
     pub included_chats: Vec<i32>,
+    #[clap(long, default_value = "1000")]
+    pub batch_size: i32,
     #[clap(subcommand)]
     pub auth: Option<SubCommand>,
 }

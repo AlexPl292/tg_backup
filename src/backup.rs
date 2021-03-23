@@ -14,7 +14,7 @@ use tokio::task::JoinHandle;
 use tokio::time::Duration;
 
 use crate::connector;
-use crate::context::{Context, ACCUMULATOR_SIZE, FILE, PHOTO, ROUND, VOICE};
+use crate::context::{Context, FILE, PHOTO, ROUND, VOICE};
 use crate::in_progress::{InProgress, InProgressInfo};
 use crate::opts::Opts;
 use crate::types::{chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, FileInfo};
@@ -35,7 +35,7 @@ pub async fn start_backup(opts: Opts) {
     // let _ = fs::remove_dir_all(PATH);
     let _ = fs::create_dir(PATH);
 
-    let backup_info = save_current_information(opts.included_chats);
+    let backup_info = save_current_information(opts.included_chats, opts.batch_size);
 
     let mut finish_loop = false;
     while !finish_loop {
@@ -104,9 +104,9 @@ async fn start_iteration(client_handle: ClientHandle, backup_info: &BackUpInfo) 
     }
 }
 
-fn save_current_information(chats: Vec<i32>) -> BackUpInfo {
+fn save_current_information(chats: Vec<i32>, batch_size: i32) -> BackUpInfo {
     let loading_chats = if chats.is_empty() { None } else { Some(chats) };
-    let current_backup_info = BackUpInfo::current_info(loading_chats);
+    let current_backup_info = BackUpInfo::current_info(loading_chats, batch_size);
     let file = File::create(format!("{}/backup.json", PATH)).unwrap();
     serde_json::to_writer_pretty(&file, &current_backup_info).unwrap();
     current_backup_info
@@ -120,7 +120,7 @@ async fn extract_dialog(
     let chat = dialog.chat();
 
     // println!("{}/{}", dialog.chat.name(), dialog.chat.id());
-    if let Some(chats) = backup_info.loading_chats {
+    if let Some(chats) = backup_info.loading_chats.as_ref() {
         if !chats.contains(&dialog.chat.id()) {
             return Ok(());
         }
@@ -154,7 +154,7 @@ async fn extract_dialog(
         }
     } else {
         // Create in progress file
-        in_progress.write_data(InProgressInfo::create(start_loading_time, &context));
+        in_progress.write_data(InProgressInfo::create(start_loading_time, &context, &backup_info));
     }
 
     let info_file = File::create(info_file_path).unwrap();
@@ -165,7 +165,7 @@ async fn extract_dialog(
         .offset_date(start_loading_time.timestamp() as i32);
     let mut last_message: Option<(i32, DateTime<Utc>)> = None;
     let total_messages = messages.total().await.unwrap_or(0);
-    let mut counter = context.accumulator_counter * ACCUMULATOR_SIZE as i32;
+    let mut counter = context.accumulator_counter * backup_info.batch_size;
     loop {
         let msg = messages.next().await;
         match msg {
@@ -177,10 +177,10 @@ async fn extract_dialog(
                     return Err(());
                 }
                 log::info!("Loaded {}/{}", counter, total_messages);
-                let dropped = context.drop_messages();
+                let dropped = context.drop_messages(&backup_info);
                 if dropped {
                     in_progress
-                        .write_data(InProgressInfo::create(last_message.unwrap().1, &context));
+                        .write_data(InProgressInfo::create(last_message.unwrap().1, &context, &backup_info));
                 }
             }
             Ok(None) => {
@@ -211,7 +211,7 @@ async fn extract_dialog(
     }
 
     if let Some(message) = last_message {
-        in_progress.write_data(InProgressInfo::create(message.1, &context));
+        in_progress.write_data(InProgressInfo::create(message.1, &context, &backup_info));
     }
 
     context.force_drop_messages();

@@ -1,5 +1,5 @@
 use crate::attachment_type::AttachmentType;
-use crate::types::MessageInfo;
+use crate::types::{MessageInfo, BackUpInfo};
 use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
@@ -9,8 +9,6 @@ pub const PHOTO: &'static str = "photo";
 pub const FILE: &'static str = "file";
 pub const ROUND: &'static str = "round";
 pub const VOICE: &'static str = "voice";
-
-pub(crate) const ACCUMULATOR_SIZE: usize = 1_000;
 
 pub struct Context {
     pub(crate) types: HashMap<String, AttachmentType>,
@@ -51,8 +49,8 @@ impl Context {
         map
     }
 
-    pub(crate) fn drop_messages(&mut self) -> bool {
-        if self.messages_accumulator.len() < ACCUMULATOR_SIZE {
+    pub(crate) fn drop_messages(&mut self, backup_info: &BackUpInfo) -> bool {
+        if self.messages_accumulator.len() < backup_info.batch_size as usize {
             return false;
         }
         self.force_drop_messages();
