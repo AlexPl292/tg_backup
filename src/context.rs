@@ -65,14 +65,25 @@ impl Context {
 
         let data_type = self.types.get(MESSAGES).unwrap();
         let messages_path = data_type.path();
-        let first_msg = self.messages_accumulator.first().unwrap().date.format("%Y%m%d");
-        let last_msg = self.messages_accumulator.last().unwrap().date.format("%Y%m%d");
+        let first_msg = self
+            .messages_accumulator
+            .first()
+            .unwrap()
+            .date
+            .format("%Y%m%d");
+        let last_msg = self
+            .messages_accumulator
+            .last()
+            .unwrap()
+            .date
+            .format("%Y%m%d");
         let mut file_path = messages_path.join(format!("data-{}-{}.json", first_msg, last_msg));
 
         let mut counter = 0;
         while file_path.exists() {
-            file_path = messages_path.join(format!("data-{}-{}-{}.json", first_msg, last_msg, counter));
-            counter+=1;
+            file_path =
+                messages_path.join(format!("data-{}-{}-{}.json", first_msg, last_msg, counter));
+            counter += 1;
         }
 
         let file = File::create(file_path).unwrap();

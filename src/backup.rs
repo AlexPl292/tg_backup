@@ -156,7 +156,11 @@ async fn extract_dialog(
         }
     } else {
         // Create in progress file
-        in_progress.write_data(InProgressInfo::create(start_loading_time, &context, &backup_info));
+        in_progress.write_data(InProgressInfo::create(
+            start_loading_time,
+            &context,
+            &backup_info,
+        ));
     }
 
     let info_file = File::create(info_file_path).unwrap();
@@ -181,8 +185,11 @@ async fn extract_dialog(
                 log::info!("Loaded {}/{}", counter, total_messages);
                 let dropped = context.drop_messages(&backup_info);
                 if dropped {
-                    in_progress
-                        .write_data(InProgressInfo::create(last_message.unwrap().1, &context, &backup_info));
+                    in_progress.write_data(InProgressInfo::create(
+                        last_message.unwrap().1,
+                        &context,
+                        &backup_info,
+                    ));
                 }
             }
             Ok(None) => {

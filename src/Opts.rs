@@ -7,6 +7,8 @@ pub struct Opts {
     pub included_chats: Vec<i32>,
     #[clap(long, default_value = "1000")]
     pub batch_size: i32,
+    #[clap(long, default_value = "false")]
+    pub clean: bool,
     #[clap(subcommand)]
     pub auth: Option<SubCommand>,
 }

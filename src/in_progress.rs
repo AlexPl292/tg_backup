@@ -1,11 +1,11 @@
 use crate::context::Context;
+use crate::types::BackUpInfo;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
-use crate::types::BackUpInfo;
 
 const FILE_NAME: &'static str = "in_progress.txt";
 
@@ -17,7 +17,11 @@ pub struct InProgressInfo {
 }
 
 impl InProgressInfo {
-    pub fn create(extract_from: DateTime<Utc>, context: &Context, backup_info: &BackUpInfo) -> InProgressInfo {
+    pub fn create(
+        extract_from: DateTime<Utc>,
+        context: &Context,
+        backup_info: &BackUpInfo,
+    ) -> InProgressInfo {
         InProgressInfo {
             extract_from,
             accumulator_counter: context.accumulator_counter,

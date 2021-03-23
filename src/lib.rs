@@ -1,10 +1,10 @@
+mod attachment_type;
 pub mod backup;
-pub mod opts;
 mod connector;
 mod context;
 mod in_progress;
+pub mod opts;
 mod types;
-mod attachment_type;
 
 pub use backup::start_backup;
 pub use opts::Opts;
