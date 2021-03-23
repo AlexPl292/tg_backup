@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io::Read;
 
 #[tokio::test]
-async fn test_add() {
+async fn test_loading() {
     start_backup(Opts {
         included_chats: vec![1707414104],
         batch_size: 5,

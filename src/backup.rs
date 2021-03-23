@@ -223,15 +223,7 @@ async fn save_message(message: &mut Message, context: &mut Context) -> Result<()
     let res = if let Some(photo) = message.photo() {
         log::info!("Loading photo {}", message.text());
         let att_type = types.get(PHOTO).unwrap();
-        let photo_id = photo.id();
-        let id = match photo_id {
-            Some(id) => id,
-            None => {
-                log::error!("Cannot get photo id");
-                // TODO not really ok
-                return Ok(());
-            }
-        };
+        let id = photo.id();
         let file_name = format!("photo@{}.jpg", id);
         let photos_path = att_type.path().join(file_name.as_str());
         let thumbs = photo.thumbs();
@@ -244,7 +236,7 @@ async fn save_message(message: &mut Message, context: &mut Context) -> Result<()
             log::info!("Loaded");
             Some((att_type, file_name, id))
         }
-    } else if let Some(doc) = message.document() {
+    } else if let Some(mut doc) = message.document() {
         let current_type = if doc.is_round_message() {
             log::info!("Round message {}", message.text());
             types.get(ROUND).unwrap()
