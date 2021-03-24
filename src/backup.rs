@@ -17,7 +17,7 @@ use crate::connector;
 use crate::context::{Context, FILE, PHOTO, ROUND, VOICE};
 use crate::in_progress::{InProgress, InProgressInfo};
 use crate::opts::Opts;
-use crate::types::{chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, FileInfo};
+use crate::types::{chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, ChatInfo, FileInfo};
 use std::io::BufReader;
 
 const PATH: &'static str = "backup";
@@ -148,12 +148,15 @@ async fn extract_dialog(
 
     let chat_path_string = make_path(chat.id(), chat.name());
     let chat_path = Path::new(chat_path_string.as_str());
-    let _ = fs::create_dir_all(chat_path);
+    if !chat_path.exists() {
+        let _ = fs::create_dir_all(chat_path);
+    }
 
     let info_file_path = chat_path.join("info.json");
 
     let mut context = Context::init(chat_path);
     let mut start_loading_time = backup_info.date.clone();
+    let mut end_loading_time: Option<DateTime<Utc>> = None;
 
     let in_progress = InProgress::create(chat_path);
     if info_file_path.exists() {
@@ -161,22 +164,32 @@ async fn extract_dialog(
             // TODO handle unwrap
             let in_progress_data = in_progress.read_data();
             start_loading_time = in_progress_data.extract_from;
+            end_loading_time = in_progress_data.extract_until;
             context.accumulator_counter = in_progress_data.accumulator_counter;
         } else {
-            // This loading is finished
-            return Ok(());
+            let file = BufReader::new(File::open(&info_file_path).unwrap());
+            let chat_info: ChatInfo = serde_json::from_reader(file).unwrap();
+            end_loading_time = Some(chat_info.loaded_up_to);
+            in_progress.write_data(InProgressInfo::create(
+                start_loading_time,
+                end_loading_time,
+                &context,
+                &backup_info,
+            ));
         }
     } else {
         // Create in progress file
         in_progress.write_data(InProgressInfo::create(
             start_loading_time,
+            end_loading_time,
             &context,
             &backup_info,
         ));
     }
 
     let info_file = File::create(info_file_path).unwrap();
-    serde_json::to_writer_pretty(&info_file, &chat_to_info(chat)).unwrap();
+    serde_json::to_writer_pretty(&info_file, &chat_to_info(chat, start_loading_time.clone()))
+        .unwrap();
 
     let mut messages = client_handle
         .iter_messages(chat)
@@ -188,6 +201,14 @@ async fn extract_dialog(
         let msg = messages.next().await;
         match msg {
             Ok(Some(mut message)) => {
+                if let Some(end_time) = end_loading_time {
+                    if message.date() < end_time {
+                        context.force_drop_messages();
+                        in_progress.remove_file();
+                        log::info!("Finish writing data: {}", chat.name());
+                        return Ok(());
+                    }
+                }
                 counter += 1;
                 last_message = Some((message.id(), message.date()));
                 let saving_result = save_message(&mut message, &mut context).await;
@@ -199,6 +220,7 @@ async fn extract_dialog(
                 if dropped {
                     in_progress.write_data(InProgressInfo::create(
                         last_message.unwrap().1,
+                        end_loading_time,
                         &context,
                         &backup_info,
                     ));
@@ -232,7 +254,12 @@ async fn extract_dialog(
     }
 
     if let Some(message) = last_message {
-        in_progress.write_data(InProgressInfo::create(message.1, &context, &backup_info));
+        in_progress.write_data(InProgressInfo::create(
+            message.1,
+            end_loading_time,
+            &context,
+            &backup_info,
+        ));
     }
 
     context.force_drop_messages();

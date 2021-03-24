@@ -7,6 +7,7 @@ use chrono::{DateTime, Utc};
 pub struct ChatInfo {
     name: String,
     id: i32,
+    pub loaded_up_to: DateTime<Utc>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -42,10 +43,11 @@ pub fn msg_to_file_info(data: &Message, file: FileInfo) -> MessageInfo {
     }
 }
 
-pub fn chat_to_info(data: &Chat) -> ChatInfo {
+pub fn chat_to_info(data: &Chat, loaded_up_to: DateTime<Utc>) -> ChatInfo {
     ChatInfo {
         name: data.name().to_string(),
         id: data.id(),
+        loaded_up_to,
     }
 }
 

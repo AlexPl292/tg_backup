@@ -12,6 +12,7 @@ const FILE_NAME: &'static str = "in_progress.txt";
 #[derive(Serialize, Deserialize)]
 pub struct InProgressInfo {
     pub extract_from: DateTime<Utc>,
+    pub extract_until: Option<DateTime<Utc>>,
     pub accumulator_counter: i32,
     pub messages_counter: i32,
 }
@@ -19,11 +20,13 @@ pub struct InProgressInfo {
 impl InProgressInfo {
     pub fn create(
         extract_from: DateTime<Utc>,
+        extract_until: Option<DateTime<Utc>>,
         context: &Context,
         backup_info: &BackUpInfo,
     ) -> InProgressInfo {
         InProgressInfo {
             extract_from,
+            extract_until,
             accumulator_counter: context.accumulator_counter,
             messages_counter: context.accumulator_counter * backup_info.batch_size
                 + (context.messages_accumulator.len() as i32),
