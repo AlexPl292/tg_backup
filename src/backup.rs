@@ -18,6 +18,7 @@ use crate::context::{Context, FILE, PHOTO, ROUND, VOICE};
 use crate::in_progress::{InProgress, InProgressInfo};
 use crate::opts::Opts;
 use crate::types::{chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, FileInfo};
+use std::io::BufReader;
 
 const PATH: &'static str = "backup";
 
@@ -108,8 +109,19 @@ async fn start_iteration(client_handle: ClientHandle, backup_info: &BackUpInfo) 
 
 fn save_current_information(chats: Vec<i32>, batch_size: i32) -> BackUpInfo {
     let loading_chats = if chats.is_empty() { None } else { Some(chats) };
-    let current_backup_info = BackUpInfo::current_info(loading_chats, batch_size);
-    let file = File::create(format!("{}/backup.json", PATH)).unwrap();
+    let mut current_backup_info = BackUpInfo::load_info(loading_chats, batch_size);
+
+    let path_string = format!("{}/backup.json", PATH);
+    let path = Path::new(path_string.as_str());
+    if path.exists() {
+        let file = BufReader::new(File::open(path).unwrap());
+        let parsed_file: Result<BackUpInfo, _> = serde_json::from_reader(file);
+        if let Ok(data) = parsed_file {
+            current_backup_info.date_from = Some(data.date)
+        }
+    }
+
+    let file = File::create(path).unwrap();
     serde_json::to_writer_pretty(&file, &current_backup_info).unwrap();
     current_backup_info
 }

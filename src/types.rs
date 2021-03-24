@@ -49,17 +49,19 @@ pub fn chat_to_info(data: &Chat) -> ChatInfo {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct BackUpInfo {
     pub date: DateTime<Utc>,
+    pub date_from: Option<DateTime<Utc>>,
     pub batch_size: i32,
     pub loading_chats: Option<Vec<i32>>,
 }
 
 impl BackUpInfo {
-    pub fn current_info(loading_chats: Option<Vec<i32>>, batch_size: i32) -> BackUpInfo {
+    pub fn load_info(loading_chats: Option<Vec<i32>>, batch_size: i32) -> BackUpInfo {
         BackUpInfo {
             date: chrono::offset::Utc::now(),
+            date_from: None,
             batch_size,
             loading_chats,
         }
