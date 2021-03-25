@@ -9,17 +9,18 @@ use grammers_client::types::{Chat, Dialog, Message};
 use grammers_client::ClientHandle;
 use grammers_mtproto::mtp::RpcError;
 use grammers_mtsender::{InvocationError, ReadError};
+use pbr::ProgressBar;
 use tokio::task;
 use tokio::task::JoinHandle;
 use tokio::time::Duration;
-use pbr::ProgressBar;
 
 use crate::connector;
-use crate::context::{ChatContext, FILE, PHOTO, ROUND, VOICE};
+use crate::context::{ChatContext, MainContext, FILE, PHOTO, ROUND, VOICE};
 use crate::in_progress::{InProgress, InProgressInfo};
 use crate::opts::Opts;
 use crate::types::{chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, ChatInfo, FileInfo};
 use std::io::BufReader;
+use std::sync::Arc;
 
 const PATH: &'static str = "backup";
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
@@ -48,13 +49,14 @@ pub async fn start_backup(opts: Opts) {
     log::info!("Initializing telegram backup.");
     log::info!("Version v{}", VERSION.unwrap_or("Unknown"));
 
-    let backup_info = save_current_information(opts.included_chats, opts.batch_size);
+    let main_ctx = save_current_information(opts.included_chats, opts.batch_size);
+    let arc_main_ctx = Arc::new(main_ctx);
 
     let mut finish_loop = false;
     while !finish_loop {
         let (client_handle, _main_handle) = get_connection().await;
 
-        let result = start_iteration(client_handle, &backup_info).await;
+        let result = start_iteration(client_handle, arc_main_ctx.clone()).await;
 
         match result {
             Ok(_) => {
@@ -88,7 +90,10 @@ async fn get_connection() -> (ClientHandle, JoinHandle<Result<(), ReadError>>) {
     }
 }
 
-async fn start_iteration(client_handle: ClientHandle, backup_info: &BackUpInfo) -> Result<(), ()> {
+async fn start_iteration(
+    client_handle: ClientHandle,
+    main_ctx: Arc<MainContext>,
+) -> Result<(), ()> {
     let mut dialogs = client_handle.iter_dialogs();
     loop {
         let dialog_res = dialogs.next().await;
@@ -98,9 +103,9 @@ async fn start_iteration(client_handle: ClientHandle, backup_info: &BackUpInfo) 
 
                 // TODO okay, this should be executed in an async manner, but it doesn't work
                 //   not sure why. So let's leave it sync.
-                let my_backup_info = (*backup_info).clone();
+                let my_main_context = main_ctx.clone();
                 let result = task::spawn(async move {
-                    extract_dialog(client_handle, dialog, my_backup_info).await
+                    extract_dialog(client_handle, dialog, my_main_context).await
                 })
                 .await
                 .unwrap();
@@ -117,9 +122,9 @@ async fn start_iteration(client_handle: ClientHandle, backup_info: &BackUpInfo) 
     }
 }
 
-fn save_current_information(chats: Vec<i32>, batch_size: i32) -> BackUpInfo {
+fn save_current_information(chats: Vec<i32>, batch_size: i32) -> MainContext {
     let loading_chats = if chats.is_empty() { None } else { Some(chats) };
-    let mut current_backup_info = BackUpInfo::load_info(loading_chats, batch_size);
+    let mut main_context = MainContext::init(loading_chats, batch_size);
 
     let path_string = format!("{}/backup.json", PATH);
     let path = Path::new(path_string.as_str());
@@ -127,23 +132,28 @@ fn save_current_information(chats: Vec<i32>, batch_size: i32) -> BackUpInfo {
         let file = BufReader::new(File::open(path).unwrap());
         let parsed_file: Result<BackUpInfo, _> = serde_json::from_reader(file);
         if let Ok(data) = parsed_file {
-            current_backup_info.date_from = Some(data.date)
+            main_context.date_from = Some(data.date)
         }
     }
 
+    let back_up_info = BackUpInfo::init(
+        main_context.date.clone(),
+        main_context.loading_chats.clone(),
+        main_context.batch_size,
+    );
     let file = File::create(path).unwrap();
-    serde_json::to_writer_pretty(&file, &current_backup_info).unwrap();
-    current_backup_info
+    serde_json::to_writer_pretty(&file, &back_up_info).unwrap();
+    main_context
 }
 
 async fn extract_dialog(
     client_handle: ClientHandle,
     dialog: Dialog,
-    backup_info: BackUpInfo,
+    main_ctx: Arc<MainContext>,
 ) -> Result<(), ()> {
     let chat = dialog.chat();
 
-    if let Some(chats) = backup_info.loading_chats.as_ref() {
+    if let Some(chats) = main_ctx.loading_chats.as_ref() {
         if !chats.contains(&dialog.chat.id()) {
             return Ok(());
         }
@@ -166,7 +176,7 @@ async fn extract_dialog(
     let info_file_path = chat_path.join("info.json");
 
     let mut chat_ctx = ChatContext::init(chat_path, chat.name().to_string());
-    let mut start_loading_time = backup_info.date.clone();
+    let mut start_loading_time = main_ctx.date.clone();
     let mut end_loading_time: Option<DateTime<Utc>> = None;
 
     let in_progress = InProgress::create(chat_path);
@@ -185,7 +195,7 @@ async fn extract_dialog(
                 start_loading_time,
                 end_loading_time,
                 &chat_ctx,
-                &backup_info,
+                &main_ctx,
             ));
         }
     } else {
@@ -194,7 +204,7 @@ async fn extract_dialog(
             start_loading_time,
             end_loading_time,
             &chat_ctx,
-            &backup_info,
+            &main_ctx,
         ));
     }
 
@@ -207,7 +217,7 @@ async fn extract_dialog(
         .offset_date(start_loading_time.timestamp() as i32);
     let mut last_message: Option<(i32, DateTime<Utc>)> = None;
     let total_messages = messages.total().await.unwrap_or(0);
-    let mut counter = chat_ctx.accumulator_counter * backup_info.batch_size;
+    let mut counter = chat_ctx.accumulator_counter * main_ctx.batch_size;
 
     let mut pb = ProgressBar::new(total_messages as u64);
     pb.message(format!("Loading {} [messages] ", chat.name()).as_str());
@@ -241,13 +251,13 @@ async fn extract_dialog(
                     pb.set(counter as u64);
                     pb.message(format!("Loading {} [messages] ", chat.name()).as_str());
                 }
-                let dropped = chat_ctx.drop_messages(&backup_info);
+                let dropped = chat_ctx.drop_messages(&main_ctx);
                 if dropped {
                     in_progress.write_data(InProgressInfo::create(
                         last_message.unwrap().1,
                         end_loading_time,
                         &chat_ctx,
-                        &backup_info,
+                        &main_ctx,
                     ));
                 }
             }
@@ -286,7 +296,7 @@ async fn extract_dialog(
             message.1,
             end_loading_time,
             &chat_ctx,
-            &backup_info,
+            &main_ctx,
         ));
     }
 

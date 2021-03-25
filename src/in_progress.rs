@@ -1,5 +1,4 @@
-use crate::context::ChatContext;
-use crate::types::BackUpInfo;
+use crate::context::{ChatContext, MainContext};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -22,13 +21,13 @@ impl InProgressInfo {
         extract_from: DateTime<Utc>,
         extract_until: Option<DateTime<Utc>>,
         context: &ChatContext,
-        backup_info: &BackUpInfo,
+        main_context: &MainContext,
     ) -> InProgressInfo {
         InProgressInfo {
             extract_from,
             extract_until,
             accumulator_counter: context.accumulator_counter,
-            messages_counter: context.accumulator_counter * backup_info.batch_size
+            messages_counter: context.accumulator_counter * main_context.batch_size
                 + (context.messages_accumulator.len() as i32),
         }
     }

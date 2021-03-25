@@ -3,7 +3,8 @@ use std::fs::File;
 use std::path::Path;
 
 use crate::attachment_type::AttachmentType;
-use crate::types::{BackUpInfo, MessageInfo};
+use crate::types::MessageInfo;
+use chrono::{DateTime, Utc};
 use pbr::ProgressBar;
 use std::io::Stdout;
 
@@ -12,6 +13,24 @@ pub const PHOTO: &'static str = "photo";
 pub const FILE: &'static str = "file";
 pub const ROUND: &'static str = "round";
 pub const VOICE: &'static str = "voice";
+
+pub struct MainContext {
+    pub(crate) date: DateTime<Utc>,
+    pub(crate) date_from: Option<DateTime<Utc>>,
+    pub(crate) batch_size: i32,
+    pub(crate) loading_chats: Option<Vec<i32>>,
+}
+
+impl MainContext {
+    pub fn init(loading_chats: Option<Vec<i32>>, batch_size: i32) -> MainContext {
+        MainContext {
+            date: chrono::offset::Utc::now(),
+            date_from: None,
+            batch_size,
+            loading_chats,
+        }
+    }
+}
 
 pub struct ChatContext {
     pub(crate) types: HashMap<String, AttachmentType>,
@@ -56,8 +75,8 @@ impl ChatContext {
         map
     }
 
-    pub(crate) fn drop_messages(&mut self, backup_info: &BackUpInfo) -> bool {
-        if self.messages_accumulator.len() < backup_info.batch_size as usize {
+    pub(crate) fn drop_messages(&mut self, main_ctx: &MainContext) -> bool {
+        if self.messages_accumulator.len() < main_ctx.batch_size as usize {
             return false;
         }
         self.force_drop_messages();
