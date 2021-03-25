@@ -12,6 +12,7 @@ use grammers_mtsender::{InvocationError, ReadError};
 use tokio::task;
 use tokio::task::JoinHandle;
 use tokio::time::Duration;
+use pbr::ProgressBar;
 
 use crate::connector;
 use crate::context::{Context, FILE, PHOTO, ROUND, VOICE};
@@ -197,6 +198,10 @@ async fn extract_dialog(
     let mut last_message: Option<(i32, DateTime<Utc>)> = None;
     let total_messages = messages.total().await.unwrap_or(0);
     let mut counter = context.accumulator_counter * backup_info.batch_size;
+
+    let mut pb = ProgressBar::new(total_messages as u64);
+    pb.message(format!("Loading {} ", chat.name()).as_str());
+
     loop {
         let msg = messages.next().await;
         match msg {
@@ -206,6 +211,7 @@ async fn extract_dialog(
                         context.force_drop_messages();
                         in_progress.remove_file();
                         log::info!("Finish writing data: {}", chat.name());
+                        pb.finish_print(format!("Finish loading of {}", chat.name()).as_str());
                         return Ok(());
                     }
                 }
@@ -213,9 +219,10 @@ async fn extract_dialog(
                 last_message = Some((message.id(), message.date()));
                 let saving_result = save_message(&mut message, &mut context).await;
                 if let Err(_) = saving_result {
+                    pb.finish();
                     return Err(());
                 }
-                log::info!("Loaded {}/{}", counter, total_messages);
+                pb.set(counter as u64);
                 let dropped = context.drop_messages(&backup_info);
                 if dropped {
                     in_progress.write_data(InProgressInfo::create(
@@ -230,6 +237,7 @@ async fn extract_dialog(
                 context.force_drop_messages();
                 in_progress.remove_file();
                 log::info!("Finish writing data: {}", chat.name());
+                pb.finish_print(format!("Finish loading of {}", chat.name()).as_str());
                 return Ok(());
             }
             Err(InvocationError::Rpc(RpcError {
@@ -263,6 +271,7 @@ async fn extract_dialog(
     }
 
     context.force_drop_messages();
+    pb.finish();
     Ok(())
 }
 
