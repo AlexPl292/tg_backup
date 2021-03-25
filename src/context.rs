@@ -4,6 +4,8 @@ use std::path::Path;
 
 use crate::attachment_type::AttachmentType;
 use crate::types::{BackUpInfo, MessageInfo};
+use pbr::ProgressBar;
+use std::io::Stdout;
 
 pub const MESSAGES: &'static str = "messages";
 pub const PHOTO: &'static str = "photo";
@@ -15,16 +17,20 @@ pub struct Context {
     pub(crate) types: HashMap<String, AttachmentType>,
     pub(crate) messages_accumulator: Vec<MessageInfo>,
     pub(crate) accumulator_counter: i32,
+    pub(crate) pb: Option<ProgressBar<Stdout>>,
+    pub(crate) chat_name: String,
 }
 
 impl Context {
-    pub fn init(path: &Path) -> Context {
+    pub fn init(path: &Path, chat_name: String) -> Context {
         let mut types = Context::init_types();
         types.values_mut().for_each(|x| x.init_folder(path));
         Context {
             types,
             messages_accumulator: vec![],
             accumulator_counter: 0,
+            pb: None,
+            chat_name,
         }
     }
 
