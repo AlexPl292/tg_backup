@@ -1,4 +1,4 @@
-use crate::context::Context;
+use crate::context::ChatContext;
 use crate::types::BackUpInfo;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -21,7 +21,7 @@ impl InProgressInfo {
     pub fn create(
         extract_from: DateTime<Utc>,
         extract_until: Option<DateTime<Utc>>,
-        context: &Context,
+        context: &ChatContext,
         backup_info: &BackUpInfo,
     ) -> InProgressInfo {
         InProgressInfo {

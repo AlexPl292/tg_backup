@@ -15,7 +15,7 @@ use tokio::time::Duration;
 use pbr::ProgressBar;
 
 use crate::connector;
-use crate::context::{Context, FILE, PHOTO, ROUND, VOICE};
+use crate::context::{ChatContext, FILE, PHOTO, ROUND, VOICE};
 use crate::in_progress::{InProgress, InProgressInfo};
 use crate::opts::Opts;
 use crate::types::{chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, ChatInfo, FileInfo};
@@ -165,7 +165,7 @@ async fn extract_dialog(
 
     let info_file_path = chat_path.join("info.json");
 
-    let mut context = Context::init(chat_path, chat.name().to_string());
+    let mut chat_ctx = ChatContext::init(chat_path, chat.name().to_string());
     let mut start_loading_time = backup_info.date.clone();
     let mut end_loading_time: Option<DateTime<Utc>> = None;
 
@@ -176,7 +176,7 @@ async fn extract_dialog(
             let in_progress_data = in_progress.read_data();
             start_loading_time = in_progress_data.extract_from;
             end_loading_time = in_progress_data.extract_until;
-            context.accumulator_counter = in_progress_data.accumulator_counter;
+            chat_ctx.accumulator_counter = in_progress_data.accumulator_counter;
         } else {
             let file = BufReader::new(File::open(&info_file_path).unwrap());
             let chat_info: ChatInfo = serde_json::from_reader(file).unwrap();
@@ -184,7 +184,7 @@ async fn extract_dialog(
             in_progress.write_data(InProgressInfo::create(
                 start_loading_time,
                 end_loading_time,
-                &context,
+                &chat_ctx,
                 &backup_info,
             ));
         }
@@ -193,7 +193,7 @@ async fn extract_dialog(
         in_progress.write_data(InProgressInfo::create(
             start_loading_time,
             end_loading_time,
-            &context,
+            &chat_ctx,
             &backup_info,
         ));
     }
@@ -207,11 +207,11 @@ async fn extract_dialog(
         .offset_date(start_loading_time.timestamp() as i32);
     let mut last_message: Option<(i32, DateTime<Utc>)> = None;
     let total_messages = messages.total().await.unwrap_or(0);
-    let mut counter = context.accumulator_counter * backup_info.batch_size;
+    let mut counter = chat_ctx.accumulator_counter * backup_info.batch_size;
 
     let mut pb = ProgressBar::new(total_messages as u64);
     pb.message(format!("Loading {} [messages] ", chat.name()).as_str());
-    context.pb = Some(pb);
+    chat_ctx.pb = Some(pb);
 
     loop {
         let msg = messages.next().await;
@@ -219,10 +219,10 @@ async fn extract_dialog(
             Ok(Some(mut message)) => {
                 if let Some(end_time) = end_loading_time {
                     if message.date() < end_time {
-                        context.force_drop_messages();
+                        chat_ctx.force_drop_messages();
                         in_progress.remove_file();
                         log::info!("Finish writing data: {}", chat.name());
-                        if let Some(pb) = context.pb.as_mut() {
+                        if let Some(pb) = chat_ctx.pb.as_mut() {
                             pb.finish_print(format!("Finish loading of {}", chat.name()).as_str());
                         }
                         return Ok(());
@@ -230,32 +230,32 @@ async fn extract_dialog(
                 }
                 counter += 1;
                 last_message = Some((message.id(), message.date()));
-                let saving_result = save_message(&mut message, &mut context).await;
+                let saving_result = save_message(&mut message, &mut chat_ctx).await;
                 if let Err(_) = saving_result {
-                    if let Some(pb) = context.pb.as_mut() {
+                    if let Some(pb) = chat_ctx.pb.as_mut() {
                         pb.finish();
                     }
                     return Err(());
                 }
-                if let Some(pb) = context.pb.as_mut() {
+                if let Some(pb) = chat_ctx.pb.as_mut() {
                     pb.set(counter as u64);
                     pb.message(format!("Loading {} [messages] ", chat.name()).as_str());
                 }
-                let dropped = context.drop_messages(&backup_info);
+                let dropped = chat_ctx.drop_messages(&backup_info);
                 if dropped {
                     in_progress.write_data(InProgressInfo::create(
                         last_message.unwrap().1,
                         end_loading_time,
-                        &context,
+                        &chat_ctx,
                         &backup_info,
                     ));
                 }
             }
             Ok(None) => {
-                context.force_drop_messages();
+                chat_ctx.force_drop_messages();
                 in_progress.remove_file();
                 log::info!("Finish writing data: {}", chat.name());
-                if let Some(pb) = context.pb.as_mut() {
+                if let Some(pb) = chat_ctx.pb.as_mut() {
                     pb.finish_print(format!("Finish loading of {}", chat.name()).as_str());
                 }
                 return Ok(());
@@ -285,24 +285,24 @@ async fn extract_dialog(
         in_progress.write_data(InProgressInfo::create(
             message.1,
             end_loading_time,
-            &context,
+            &chat_ctx,
             &backup_info,
         ));
     }
 
-    context.force_drop_messages();
+    chat_ctx.force_drop_messages();
 
-    if let Some(pb) = context.pb.as_mut() {
+    if let Some(pb) = chat_ctx.pb.as_mut() {
         pb.finish();
     }
     Ok(())
 }
 
-async fn save_message(message: &mut Message, context: &mut Context) -> Result<(), ()> {
-    let types = &context.types;
+async fn save_message(message: &mut Message, chat_ctx: &mut ChatContext) -> Result<(), ()> {
+    let types = &chat_ctx.types;
     let res = if let Some(photo) = message.photo() {
-        if let Some(pb) = context.pb.as_mut() {
-            pb.message(format!("Loading {} [photo   ] ", context.chat_name.as_str()).as_str());
+        if let Some(pb) = chat_ctx.pb.as_mut() {
+            pb.message(format!("Loading {} [photo   ] ", chat_ctx.chat_name.as_str()).as_str());
         }
         log::debug!("Loading photo {}", message.text());
         let att_type = types.get(PHOTO).unwrap();
@@ -320,20 +320,20 @@ async fn save_message(message: &mut Message, context: &mut Context) -> Result<()
         }
     } else if let Some(mut doc) = message.document() {
         let current_type = if doc.is_round_message() {
-            if let Some(pb) = context.pb.as_mut() {
-                pb.message(format!("Loading {} [round   ] ", context.chat_name.as_str()).as_str());
+            if let Some(pb) = chat_ctx.pb.as_mut() {
+                pb.message(format!("Loading {} [round   ] ", chat_ctx.chat_name.as_str()).as_str());
             }
             log::debug!("Round message {}", message.text());
             types.get(ROUND).unwrap()
         } else if doc.is_voice_message() {
-            if let Some(pb) = context.pb.as_mut() {
-                pb.message(format!("Loading {} [voice   ] ", context.chat_name.as_str()).as_str());
+            if let Some(pb) = chat_ctx.pb.as_mut() {
+                pb.message(format!("Loading {} [voice   ] ", chat_ctx.chat_name.as_str()).as_str());
             }
             log::debug!("Voice message {}", message.text());
             types.get(VOICE).unwrap()
         } else {
-            if let Some(pb) = context.pb.as_mut() {
-                pb.message(format!("Loading {} [file    ] ", context.chat_name.as_str()).as_str());
+            if let Some(pb) = chat_ctx.pb.as_mut() {
+                pb.message(format!("Loading {} [file    ] ", chat_ctx.chat_name.as_str()).as_str());
             }
             log::debug!("File {}", message.text());
             types.get(FILE).unwrap()
@@ -360,11 +360,11 @@ async fn save_message(message: &mut Message, context: &mut Context) -> Result<()
             path: photo_path,
         };
         let message_info = msg_to_file_info(&message, attachment_info);
-        context.messages_accumulator.push(message_info);
+        chat_ctx.messages_accumulator.push(message_info);
         Ok(())
     } else {
         log::debug!("Loading message {}", message.text());
-        context.messages_accumulator.push(msg_to_info(message));
+        chat_ctx.messages_accumulator.push(msg_to_info(message));
         Ok(())
     }
 }

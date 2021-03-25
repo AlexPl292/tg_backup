@@ -13,7 +13,7 @@ pub const FILE: &'static str = "file";
 pub const ROUND: &'static str = "round";
 pub const VOICE: &'static str = "voice";
 
-pub struct Context {
+pub struct ChatContext {
     pub(crate) types: HashMap<String, AttachmentType>,
     pub(crate) messages_accumulator: Vec<MessageInfo>,
     pub(crate) accumulator_counter: i32,
@@ -21,11 +21,11 @@ pub struct Context {
     pub(crate) chat_name: String,
 }
 
-impl Context {
-    pub fn init(path: &Path, chat_name: String) -> Context {
-        let mut types = Context::init_types();
+impl ChatContext {
+    pub fn init(path: &Path, chat_name: String) -> ChatContext {
+        let mut types = ChatContext::init_types();
         types.values_mut().for_each(|x| x.init_folder(path));
-        Context {
+        ChatContext {
             types,
             messages_accumulator: vec![],
             accumulator_counter: 0,
