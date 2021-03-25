@@ -72,7 +72,7 @@ pub async fn auth() {
                     .unwrap();
             }
             Ok(_) => (),
-            Err(e) => panic!(e),
+            Err(e) => panic!("{}", e),
         };
         println!("Signed in!");
         match client.session().save() {
