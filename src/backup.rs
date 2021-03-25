@@ -178,6 +178,7 @@ async fn extract_dialog(
     let mut chat_ctx = ChatContext::init(chat_path, chat.name().to_string());
     let mut start_loading_time = main_ctx.date.clone();
     let mut end_loading_time: Option<DateTime<Utc>> = None;
+    let mut last_loaded_id: Option<i32> = None;
     let mut counter = chat_ctx.accumulator_counter * main_ctx.batch_size;
 
     let in_progress = InProgress::create(chat_path);
@@ -188,6 +189,7 @@ async fn extract_dialog(
             end_loading_time = in_progress_data.extract_until;
             chat_ctx.accumulator_counter = in_progress_data.accumulator_counter;
             counter = in_progress_data.messages_counter;
+            last_loaded_id = in_progress_data.last_loaded_id;
         } else {
             let file = BufReader::new(File::open(&info_file_path).unwrap());
             let chat_info: ChatInfo = serde_json::from_reader(file).unwrap();
@@ -195,6 +197,7 @@ async fn extract_dialog(
             in_progress.write_data(InProgressInfo::create(
                 start_loading_time,
                 end_loading_time,
+                None,
                 &chat_ctx,
                 &main_ctx,
             ));
@@ -204,6 +207,7 @@ async fn extract_dialog(
         in_progress.write_data(InProgressInfo::create(
             start_loading_time,
             end_loading_time,
+            None,
             &chat_ctx,
             &main_ctx,
         ));
@@ -216,6 +220,9 @@ async fn extract_dialog(
     let mut messages = client_handle
         .iter_messages(chat)
         .offset_date(start_loading_time.timestamp() as i32);
+    if let Some(id) = last_loaded_id {
+        messages = messages.offset_id(id);
+    }
     let mut last_message: Option<(i32, DateTime<Utc>)> = None;
     let total_messages = messages.total().await.unwrap_or(0);
 
@@ -256,6 +263,7 @@ async fn extract_dialog(
                     in_progress.write_data(InProgressInfo::create(
                         last_message.unwrap().1,
                         end_loading_time,
+                        Some(last_message.unwrap().0),
                         &chat_ctx,
                         &main_ctx,
                     ));
@@ -295,6 +303,7 @@ async fn extract_dialog(
         in_progress.write_data(InProgressInfo::create(
             message.1,
             end_loading_time,
+            Some(message.0),
             &chat_ctx,
             &main_ctx,
         ));

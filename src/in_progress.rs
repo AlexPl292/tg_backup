@@ -12,6 +12,7 @@ const FILE_NAME: &'static str = "in_progress.txt";
 pub struct InProgressInfo {
     pub extract_from: DateTime<Utc>,
     pub extract_until: Option<DateTime<Utc>>,
+    pub last_loaded_id: Option<i32>,
     pub accumulator_counter: i32,
     pub messages_counter: i32,
 }
@@ -20,12 +21,14 @@ impl InProgressInfo {
     pub fn create(
         extract_from: DateTime<Utc>,
         extract_until: Option<DateTime<Utc>>,
+        last_loaded_id: Option<i32>,
         context: &ChatContext,
         main_context: &MainContext,
     ) -> InProgressInfo {
         InProgressInfo {
             extract_from,
             extract_until,
+            last_loaded_id,
             accumulator_counter: context.accumulator_counter,
             messages_counter: context.accumulator_counter * main_context.batch_size
                 + (context.messages_accumulator.len() as i32),
