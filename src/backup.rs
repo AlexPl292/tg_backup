@@ -178,15 +178,16 @@ async fn extract_dialog(
     let mut chat_ctx = ChatContext::init(chat_path, chat.name().to_string());
     let mut start_loading_time = main_ctx.date.clone();
     let mut end_loading_time: Option<DateTime<Utc>> = None;
+    let mut counter = chat_ctx.accumulator_counter * main_ctx.batch_size;
 
     let in_progress = InProgress::create(chat_path);
     if info_file_path.exists() {
         if in_progress.exists() {
-            // TODO handle unwrap
             let in_progress_data = in_progress.read_data();
             start_loading_time = in_progress_data.extract_from;
             end_loading_time = in_progress_data.extract_until;
             chat_ctx.accumulator_counter = in_progress_data.accumulator_counter;
+            counter = in_progress_data.messages_counter;
         } else {
             let file = BufReader::new(File::open(&info_file_path).unwrap());
             let chat_info: ChatInfo = serde_json::from_reader(file).unwrap();
@@ -217,7 +218,6 @@ async fn extract_dialog(
         .offset_date(start_loading_time.timestamp() as i32);
     let mut last_message: Option<(i32, DateTime<Utc>)> = None;
     let total_messages = messages.total().await.unwrap_or(0);
-    let mut counter = chat_ctx.accumulator_counter * main_ctx.batch_size;
 
     let mut pb = ProgressBar::new(total_messages as u64);
     pb.message(format!("Loading {} [messages] ", chat.name()).as_str());
