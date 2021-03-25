@@ -22,6 +22,7 @@ use crate::types::{chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, Chat
 use std::io::BufReader;
 
 const PATH: &'static str = "backup";
+const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 
 pub async fn start_backup(opts: Opts) {
     if let Some(_) = opts.auth {
@@ -38,6 +39,14 @@ pub async fn start_backup(opts: Opts) {
         let _ = fs::remove_dir_all(PATH);
     }
     let _ = fs::create_dir(PATH);
+
+    let log_dir = format!("{}/logs", PATH);
+    let _ = fs::create_dir(log_dir.as_str());
+    let log_path = format!("{}/tg_backup.log", log_dir);
+    simple_logging::log_to_file(log_path, log::LevelFilter::Info).unwrap();
+
+    log::info!("Initializing telegram backup.");
+    log::info!("Version v{}", VERSION.unwrap_or("Unknown"));
 
     let backup_info = save_current_information(opts.included_chats, opts.batch_size);
 
@@ -134,12 +143,13 @@ async fn extract_dialog(
 ) -> Result<(), ()> {
     let chat = dialog.chat();
 
-    // println!("{}/{}", dialog.chat.name(), dialog.chat.id());
     if let Some(chats) = backup_info.loading_chats.as_ref() {
         if !chats.contains(&dialog.chat.id()) {
             return Ok(());
         }
     }
+
+    log::info!("Saving chat name: {} id: {}", chat.name(), chat.id());
 
     if let Chat::User(_) = chat {
     } else {
@@ -278,7 +288,7 @@ async fn extract_dialog(
 async fn save_message(message: &mut Message, context: &mut Context) -> Result<(), ()> {
     let types = &context.types;
     let res = if let Some(photo) = message.photo() {
-        log::info!("Loading photo {}", message.text());
+        log::debug!("Loading photo {}", message.text());
         let att_type = types.get(PHOTO).unwrap();
         let id = photo.id();
         let file_name = format!("photo@{}.jpg", id);
@@ -290,18 +300,17 @@ async fn save_message(message: &mut Message, context: &mut Context) -> Result<()
             log::error!("Cannot download photo");
             return Err(());
         } else {
-            log::info!("Loaded");
             Some((att_type, file_name, id))
         }
     } else if let Some(mut doc) = message.document() {
         let current_type = if doc.is_round_message() {
-            log::info!("Round message {}", message.text());
+            log::debug!("Round message {}", message.text());
             types.get(ROUND).unwrap()
         } else if doc.is_voice_message() {
-            log::info!("Voice message {}", message.text());
+            log::debug!("Voice message {}", message.text());
             types.get(VOICE).unwrap()
         } else {
-            log::info!("File {}", message.text());
+            log::debug!("File {}", message.text());
             types.get(FILE).unwrap()
         };
 
@@ -312,7 +321,6 @@ async fn save_message(message: &mut Message, context: &mut Context) -> Result<()
         let file_name = current_type.format(file_name);
         let file_path = current_type.path().join(file_name.as_str());
         doc.download(&file_path).await;
-        log::info!("Loaded");
         Some((current_type, file_name, doc.id()))
     } else {
         None
@@ -330,7 +338,7 @@ async fn save_message(message: &mut Message, context: &mut Context) -> Result<()
         context.messages_accumulator.push(message_info);
         Ok(())
     } else {
-        // log::info!("Loading no message {}", message.text());
+        log::debug!("Loading message {}", message.text());
         context.messages_accumulator.push(msg_to_info(message));
         Ok(())
     }

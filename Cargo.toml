@@ -15,7 +15,7 @@ grammers-mtsender = { git = "https://github.com/AlexPl292/grammers" }
 grammers-mtproto = { git = "https://github.com/AlexPl292/grammers" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-simple_logger = "1.11.0"
+simple-logging = "2.0.2"
 log = "0.4.8"
 chrono = { version = "0.4.19", features = ["serde"] }
 clap = "3.0.0-beta.2"
