@@ -359,9 +359,7 @@ async fn save_message(message: &mut Message, chat_ctx: &mut ChatContext) -> Resu
         };
 
         let mut file_name = doc.name().to_string();
-        if file_name.is_empty() {
-            file_name = doc.id().to_string();
-        }
+        file_name = format!("{}-{}", doc.id(), file_name);
         let file_name = current_type.format(file_name);
         let file_path = current_type.path().join(file_name.as_str());
         doc.download(&file_path).await;

@@ -29,10 +29,11 @@ impl AttachmentType {
     }
 
     pub fn format(&self, name: String) -> String {
-        format!(
-            "{}{}",
-            name,
-            self.extension.as_ref().unwrap_or(&String::new())
-        )
+        if let Some(ext) = self.extension.as_ref() {
+            if !name.ends_with(ext) {
+                return format!("{}{}", name, ext);
+            }
+        }
+        return name;
     }
 }
