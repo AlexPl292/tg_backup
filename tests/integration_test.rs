@@ -7,7 +7,7 @@ use tg_backup::{start_backup, Opts};
 #[tokio::test]
 async fn test_loading() {
     start_backup(Opts {
-        included_chats: vec![1707414104],
+        included_chats: vec![1707414104, 1720199897],
         batch_size: 5,
         clean: true,
         auth: None,
