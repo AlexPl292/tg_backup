@@ -326,6 +326,12 @@ async fn save_message(message: &mut Message, chat_ctx: &mut ChatContext) -> Resu
         log::debug!("Loading photo {}", message.text());
         let att_type = types.get(PHOTO).unwrap();
         let id = photo.id();
+        if let None = id {
+            // TODO handle this
+            // Photo has been expired
+            return Ok(());
+        }
+        let id = id.unwrap();
         let file_name = format!("photo@{}.jpg", id);
         let photos_path = att_type.path().join(file_name.as_str());
         let thumbs = photo.thumbs();
