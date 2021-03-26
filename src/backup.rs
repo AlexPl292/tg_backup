@@ -58,14 +58,14 @@ pub async fn start_backup(opts: Opts) {
 
         let result = start_iteration(client_handle, arc_main_ctx.clone()).await;
 
-        match result {
+        finish_loop = match result {
             Ok(_) => {
-                println!("Finish");
-                finish_loop = true
+                log::info!("Finishing backups");
+                true
             }
             Err(_) => {
-                println!("Continue");
-                finish_loop = false
+                log::info!("Start new backup loop");
+                false
             }
         }
     }

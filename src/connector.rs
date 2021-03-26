@@ -18,7 +18,7 @@ pub async fn create_connection(
     let api_id = env!("TG_ID").parse().expect("TG_ID invalid");
     let api_hash = env!("TG_HASH").to_string();
 
-    println!("Connecting to Telegram...");
+    log::info!("Connecting to Telegram...");
     let client = Client::connect(Config {
         session: FileSession::load(FILE_NAME).unwrap(),
         api_id,
@@ -26,7 +26,7 @@ pub async fn create_connection(
         params: Default::default(),
     })
     .await?;
-    println!("Connected!");
+    log::info!("Connected!");
 
     let client_handle = client.handle();
 
@@ -38,7 +38,7 @@ pub async fn auth() {
     let api_id = env!("TG_ID").parse().expect("TG_ID invalid");
     let api_hash = env!("TG_HASH").to_string();
 
-    println!("Connecting to Telegram...");
+    log::info!("Connecting to Telegram...");
     let mut client = Client::connect(Config {
         session: FileSession::create(FILE_NAME).unwrap(),
         api_id,
@@ -47,10 +47,10 @@ pub async fn auth() {
     })
     .await
     .unwrap();
-    println!("Connected!");
+    log::info!("Connected!");
 
     if !client.is_authorized().await.unwrap() {
-        println!("Signing in...");
+        log::info!("Signing in...");
         let phone = prompt("Enter your phone number (international format): ").unwrap();
         let token = client
             .request_login_code(&phone, api_id, &api_hash)
@@ -74,11 +74,11 @@ pub async fn auth() {
             Ok(_) => (),
             Err(e) => panic!("{}", e),
         };
-        println!("Signed in!");
+        log::info!("Signed in!");
         match client.session().save() {
             Ok(_) => {}
             Err(e) => {
-                println!(
+                log::error!(
                     "NOTE: failed to save the session, will sign out when done: {}",
                     e
                 );
