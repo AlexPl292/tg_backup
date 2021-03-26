@@ -362,7 +362,8 @@ async fn save_message(message: &mut Message, chat_ctx: &mut ChatContext) -> Resu
         file_name = format!("{}-{}", doc.id(), file_name);
         let file_name = current_type.format(file_name);
         let file_path = current_type.path().join(file_name.as_str());
-        doc.download(&file_path).await;
+        // TODO handle file migrate
+        let _ = doc.download(&file_path).await;
         Some((current_type, file_name, doc.id()))
     } else {
         None
