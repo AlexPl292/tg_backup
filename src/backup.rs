@@ -159,13 +159,13 @@ async fn extract_dialog(
         }
     }
 
-    log::info!("Saving chat name: {} id: {}", chat.name(), chat.id());
-
     if let Chat::User(_) = chat {
     } else {
         // Save only one-to-one dialogs at the moment
         return Ok(());
     }
+
+    log::info!("Saving chat. name: {} id: {}", chat.name(), chat.id());
 
     let chat_path_string = make_path(chat.id(), chat.name());
     let chat_path = Path::new(chat_path_string.as_str());
