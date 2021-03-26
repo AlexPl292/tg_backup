@@ -6,7 +6,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
-const FILE_NAME: &'static str = "in_progress.txt";
+const FILE_NAME: &'static str = "in_progress.json";
 
 #[derive(Serialize, Deserialize)]
 pub struct InProgressInfo {
