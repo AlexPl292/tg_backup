@@ -20,7 +20,7 @@ impl AttachmentType {
 
     pub fn init_folder(&mut self, path: &Path) {
         let photos_path = path.join(self.folder.as_str());
-        let _ = fs::create_dir(&photos_path);
+        let _ = fs::create_dir_all(&photos_path);
         self.path = Some(photos_path.into_boxed_path())
     }
 

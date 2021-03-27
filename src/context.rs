@@ -72,16 +72,16 @@ impl ChatContext {
         );
         map.insert(
             PHOTO.to_string(),
-            AttachmentType::init("photos", PHOTO, Some(".jpg")),
+            AttachmentType::init("media/photos", PHOTO, Some(".jpg")),
         );
-        map.insert(FILE.to_string(), AttachmentType::init("files", FILE, None));
+        map.insert(FILE.to_string(), AttachmentType::init("media/files", FILE, None));
         map.insert(
             ROUND.to_string(),
-            AttachmentType::init("rounds", ROUND, Some(".mp4")),
+            AttachmentType::init("media/rounds", ROUND, Some(".mp4")),
         );
         map.insert(
             VOICE.to_string(),
-            AttachmentType::init("voice_messages", VOICE, Some(".ogg")),
+            AttachmentType::init("media/voice_messages", VOICE, Some(".ogg")),
         );
         map
     }
