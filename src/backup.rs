@@ -2,7 +2,7 @@ use std::fs;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use std::thread::sleep;
 
 use chrono::{DateTime, Utc};
@@ -17,7 +17,7 @@ use tokio::task::JoinHandle;
 use tokio::time::Duration;
 
 use crate::connector;
-use crate::context::{ChatContext, MainContext, FILE, PHOTO, ROUND, VOICE};
+use crate::context::{ChatContext, MainContext, FILE, PHOTO, ROUND, VOICE, MainMutContext};
 use crate::in_progress::{InProgress, InProgressInfo};
 use crate::opts::Opts;
 use crate::types::{
@@ -55,11 +55,15 @@ pub async fn start_backup(opts: Opts) {
         save_current_information(opts.included_chats, opts.excluded_chats, opts.batch_size);
     let arc_main_ctx = Arc::new(main_ctx);
 
+    let main_mut_context = Arc::new(RwLock::new(MainMutContext {
+        already_finished: vec![],
+    }));
+
     let mut finish_loop = false;
     while !finish_loop {
         let (client_handle, _main_handle) = get_connection().await;
 
-        let result = start_iteration(client_handle, arc_main_ctx.clone()).await;
+        let result = start_iteration(client_handle, arc_main_ctx.clone(), main_mut_context.clone()).await;
 
         finish_loop = match result {
             Ok(_) => {
@@ -96,6 +100,7 @@ async fn get_connection() -> (ClientHandle, JoinHandle<Result<(), ReadError>>) {
 async fn start_iteration(
     client_handle: ClientHandle,
     main_ctx: Arc<MainContext>,
+    main_mut_ctx: Arc<RwLock<MainMutContext>>,
 ) -> Result<(), ()> {
     let mut dialogs = client_handle.iter_dialogs();
     loop {
@@ -107,8 +112,9 @@ async fn start_iteration(
                 // TODO okay, this should be executed in an async manner, but it doesn't work
                 //   not sure why. So let's leave it sync.
                 let my_main_context = main_ctx.clone();
+                let my_main_mut_context = main_mut_ctx.clone();
                 let result = task::spawn(async move {
-                    extract_dialog(client_handle, dialog, my_main_context).await
+                    extract_dialog(client_handle, dialog, my_main_context, my_main_mut_context).await
                 })
                 .await
                 .unwrap();
@@ -154,6 +160,7 @@ async fn extract_dialog(
     client_handle: ClientHandle,
     dialog: Dialog,
     main_ctx: Arc<MainContext>,
+    main_mut_ctx: Arc<RwLock<MainMutContext>>,
 ) -> Result<(), ()> {
     let chat = dialog.chat();
 
@@ -165,6 +172,12 @@ async fn extract_dialog(
 
     if main_ctx.excluded_chats.contains(&dialog.chat.id()) {
         return Ok(());
+    }
+
+    if let Ok(ctx) = main_mut_ctx.read() {
+        if ctx.already_finished.contains(&dialog.chat.id()) {
+            return Ok(());
+        }
     }
 
     let user = if let Chat::User(user) = chat {
@@ -283,6 +296,9 @@ async fn extract_dialog(
                     if message.date() < end_time {
                         chat_ctx.force_drop_messages();
                         in_progress.remove_file();
+                        if let Ok(mut ctx) = main_mut_ctx.write() {
+                            ctx.already_finished.push(chat.id());
+                        }
                         log::info!("Finish writing data: {}", chat.name());
                         if let Some(pb) = chat_ctx.pb.as_mut() {
                             pb.finish_println(
@@ -344,6 +360,9 @@ async fn extract_dialog(
             Ok(None) => {
                 chat_ctx.force_drop_messages();
                 in_progress.remove_file();
+                if let Ok(mut ctx) = main_mut_ctx.write() {
+                    ctx.already_finished.push(chat.id());
+                }
                 log::info!("Finish writing data: {}", chat.name());
                 if let Some(pb) = chat_ctx.pb.as_mut() {
                     pb.finish_println(format!("Finish loading of {}", chat.name()).as_str());

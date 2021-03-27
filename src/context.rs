@@ -14,6 +14,10 @@ pub const FILE: &'static str = "file";
 pub const ROUND: &'static str = "round";
 pub const VOICE: &'static str = "voice";
 
+pub struct MainMutContext {
+    pub(crate) already_finished: Vec<i32>,
+}
+
 pub struct MainContext {
     pub(crate) date: DateTime<Utc>,
     pub(crate) date_from: Option<DateTime<Utc>>,
@@ -74,7 +78,10 @@ impl ChatContext {
             PHOTO.to_string(),
             AttachmentType::init("media/photos", PHOTO, Some(".jpg")),
         );
-        map.insert(FILE.to_string(), AttachmentType::init("media/files", FILE, None));
+        map.insert(
+            FILE.to_string(),
+            AttachmentType::init("media/files", FILE, None),
+        );
         map.insert(
             ROUND.to_string(),
             AttachmentType::init("media/rounds", ROUND, Some(".mp4")),
