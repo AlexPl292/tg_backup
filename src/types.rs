@@ -31,6 +31,7 @@ pub enum Attachment {
     Voice(FileInfo),
     Round(FileInfo),
     None,
+    Error(String),
 }
 
 pub fn msg_to_info(data: &Message) -> MessageInfo {

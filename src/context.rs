@@ -38,6 +38,9 @@ pub struct ChatContext {
     pub(crate) accumulator_counter: i32,
     pub(crate) pb: Option<ProgressBar<Stdout>>,
     pub(crate) chat_name: String,
+
+    pub(crate) file_issue: i64,
+    pub(crate) file_issue_count: i32,
 }
 
 impl ChatContext {
@@ -50,6 +53,8 @@ impl ChatContext {
             accumulator_counter: 0,
             pb: None,
             chat_name,
+            file_issue: 0,
+            file_issue_count: 0,
         }
     }
 

@@ -190,6 +190,8 @@ async fn extract_dialog(
             start_loading_time = in_progress_data.extract_from;
             end_loading_time = in_progress_data.extract_until;
             chat_ctx.accumulator_counter = in_progress_data.accumulator_counter;
+            chat_ctx.file_issue = in_progress_data.file_issue;
+            chat_ctx.file_issue_count = in_progress_data.file_issue_count;
             counter = in_progress_data.messages_counter;
             last_loaded_id = in_progress_data.last_loaded_id;
         } else {
@@ -258,6 +260,14 @@ async fn extract_dialog(
                             time,
                             end_loading_time,
                             Some(id),
+                            &chat_ctx,
+                            &main_ctx,
+                        ));
+                    } else {
+                        in_progress.write_data(InProgressInfo::create(
+                            start_loading_time,
+                            end_loading_time,
+                            last_loaded_id,
                             &chat_ctx,
                             &main_ctx,
                         ));
@@ -354,9 +364,21 @@ async fn save_message(message: &mut Message, chat_ctx: &mut ChatContext) -> Resu
             id,
             path: photo_path,
         });
-        if let Err(_) = downloaded {
-            log::error!("Cannot download photo");
-            return Err(());
+        if let Err(e) = downloaded {
+            if chat_ctx.file_issue == id {
+                chat_ctx.file_issue_count += 1;
+                if chat_ctx.file_issue_count > 5 {
+                    Some(Attachment::Error(format!("Cannot load: {}", e)))
+                } else {
+                    log::error!("Cannot download photo");
+                    return Err(());
+                }
+            } else {
+                chat_ctx.file_issue = id;
+                chat_ctx.file_issue_count = 0;
+                log::error!("Cannot download photo");
+                return Err(());
+            }
         } else {
             Some(attachment)
         }
@@ -412,8 +434,25 @@ async fn save_message(message: &mut Message, chat_ctx: &mut ChatContext) -> Resu
         };
 
         // TODO handle file migrate
-        let _ = doc.download(&file_path).await;
-        Some(attachment)
+        let downloaded = doc.download(&file_path).await;
+        if let Err(e) = downloaded {
+            if chat_ctx.file_issue == doc.id() {
+                chat_ctx.file_issue_count += 1;
+                if chat_ctx.file_issue_count > 5 {
+                    Some(Attachment::Error(format!("Cannot load: {}", e)))
+                } else {
+                    log::error!("Cannot download photo");
+                    return Err(());
+                }
+            } else {
+                chat_ctx.file_issue = doc.id();
+                chat_ctx.file_issue_count = 0;
+                log::error!("Cannot download photo");
+                return Err(());
+            }
+        } else {
+            Some(attachment)
+        }
     } else {
         None
     };
