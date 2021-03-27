@@ -64,19 +64,22 @@ pub fn chat_to_info(data: &Chat, loaded_up_to: DateTime<Utc>) -> ChatInfo {
 pub struct BackUpInfo {
     pub date: DateTime<Utc>,
     pub batch_size: i32,
-    pub loading_chats: Option<Vec<i32>>,
+    pub included_chats: Option<Vec<i32>>,
+    pub excluded_chats: Vec<i32>,
 }
 
 impl BackUpInfo {
     pub fn init(
         date: DateTime<Utc>,
         loading_chats: Option<Vec<i32>>,
+        excluded_chats: Vec<i32>,
         batch_size: i32,
     ) -> BackUpInfo {
         BackUpInfo {
             date,
             batch_size,
-            loading_chats,
+            included_chats: loading_chats,
+            excluded_chats,
         }
     }
 }

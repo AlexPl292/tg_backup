@@ -18,16 +18,22 @@ pub struct MainContext {
     pub(crate) date: DateTime<Utc>,
     pub(crate) date_from: Option<DateTime<Utc>>,
     pub(crate) batch_size: i32,
-    pub(crate) loading_chats: Option<Vec<i32>>,
+    pub(crate) included_chats: Option<Vec<i32>>,
+    pub(crate) excluded_chats: Vec<i32>,
 }
 
 impl MainContext {
-    pub fn init(loading_chats: Option<Vec<i32>>, batch_size: i32) -> MainContext {
+    pub fn init(
+        loading_chats: Option<Vec<i32>>,
+        excluded_chats: Vec<i32>,
+        batch_size: i32,
+    ) -> MainContext {
         MainContext {
             date: chrono::offset::Utc::now(),
             date_from: None,
             batch_size,
-            loading_chats,
+            included_chats: loading_chats,
+            excluded_chats,
         }
     }
 }

@@ -51,7 +51,8 @@ pub async fn start_backup(opts: Opts) {
     log::info!("Initializing telegram backup.");
     log::info!("Version v{}", VERSION.unwrap_or("Unknown"));
 
-    let main_ctx = save_current_information(opts.included_chats, opts.batch_size);
+    let main_ctx =
+        save_current_information(opts.included_chats, opts.excluded_chats, opts.batch_size);
     let arc_main_ctx = Arc::new(main_ctx);
 
     let mut finish_loop = false;
@@ -124,9 +125,9 @@ async fn start_iteration(
     }
 }
 
-fn save_current_information(chats: Vec<i32>, batch_size: i32) -> MainContext {
+fn save_current_information(chats: Vec<i32>, excluded: Vec<i32>, batch_size: i32) -> MainContext {
     let loading_chats = if chats.is_empty() { None } else { Some(chats) };
-    let mut main_context = MainContext::init(loading_chats, batch_size);
+    let mut main_context = MainContext::init(loading_chats, excluded, batch_size);
 
     let path_string = format!("{}/backup.json", PATH);
     let path = Path::new(path_string.as_str());
@@ -140,7 +141,8 @@ fn save_current_information(chats: Vec<i32>, batch_size: i32) -> MainContext {
 
     let back_up_info = BackUpInfo::init(
         main_context.date.clone(),
-        main_context.loading_chats.clone(),
+        main_context.included_chats.clone(),
+        main_context.excluded_chats.clone(),
         main_context.batch_size,
     );
     let file = File::create(path).unwrap();
@@ -155,10 +157,14 @@ async fn extract_dialog(
 ) -> Result<(), ()> {
     let chat = dialog.chat();
 
-    if let Some(chats) = main_ctx.loading_chats.as_ref() {
+    if let Some(chats) = main_ctx.included_chats.as_ref() {
         if !chats.contains(&dialog.chat.id()) {
             return Ok(());
         }
+    }
+
+    if main_ctx.excluded_chats.contains(&dialog.chat.id()) {
+        return Ok(());
     }
 
     if let Chat::User(_) = chat {
