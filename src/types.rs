@@ -15,14 +15,22 @@ pub struct MessageInfo {
     text: String,
     id: i32,
     pub date: DateTime<Utc>,
-    attachment: Option<FileInfo>,
+    attachment: Attachment,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct FileInfo {
     pub id: i64,
-    pub attachment_type: String,
     pub path: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub enum Attachment {
+    File(FileInfo),
+    Photo(FileInfo),
+    Voice(FileInfo),
+    Round(FileInfo),
+    None,
 }
 
 pub fn msg_to_info(data: &Message) -> MessageInfo {
@@ -30,16 +38,16 @@ pub fn msg_to_info(data: &Message) -> MessageInfo {
         text: data.text().to_string(),
         id: data.id(),
         date: data.date(),
-        attachment: None,
+        attachment: Attachment::None,
     }
 }
 
-pub fn msg_to_file_info(data: &Message, file: FileInfo) -> MessageInfo {
+pub fn msg_to_file_info(data: &Message, attachment: Attachment) -> MessageInfo {
     MessageInfo {
         text: data.text().to_string(),
         id: data.id(),
         date: data.date(),
-        attachment: Some(file),
+        attachment,
     }
 }
 

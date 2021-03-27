@@ -18,7 +18,9 @@ use crate::connector;
 use crate::context::{ChatContext, MainContext, FILE, PHOTO, ROUND, VOICE};
 use crate::in_progress::{InProgress, InProgressInfo};
 use crate::opts::Opts;
-use crate::types::{chat_to_info, msg_to_file_info, msg_to_info, BackUpInfo, ChatInfo, FileInfo};
+use crate::types::{
+    chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo,
+};
 use std::io::BufReader;
 use std::sync::Arc;
 
@@ -324,7 +326,7 @@ async fn save_message(message: &mut Message, chat_ctx: &mut ChatContext) -> Resu
             pb.message(format!("Loading {} [photo   ] ", chat_ctx.chat_name.as_str()).as_str());
         }
         log::debug!("Loading photo {}", message.text());
-        let att_type = types.get(PHOTO).unwrap();
+        let current_type = types.get(PHOTO).unwrap();
         let id = photo.id();
         if let None = id {
             // TODO handle this
@@ -333,57 +335,81 @@ async fn save_message(message: &mut Message, chat_ctx: &mut ChatContext) -> Resu
         }
         let id = id.unwrap();
         let file_name = format!("photo@{}.jpg", id);
-        let photos_path = att_type.path().join(file_name.as_str());
+        let photos_path = current_type.path().join(file_name.as_str());
         let thumbs = photo.thumbs();
         let first = thumbs.largest();
         let downloaded = first.unwrap().download(&photos_path).await;
+        let photo_path = format!("../{}/{}", current_type.folder, file_name);
+        let attachment = Attachment::Photo(FileInfo {
+            id,
+            path: photo_path,
+        });
         if let Err(_) = downloaded {
             log::error!("Cannot download photo");
             return Err(());
         } else {
-            Some((att_type, file_name, id))
+            Some(attachment)
         }
     } else if let Some(mut doc) = message.document() {
-        let current_type = if doc.is_round_message() {
+        let (attachment, file_path) = if doc.is_round_message() {
             if let Some(pb) = chat_ctx.pb.as_mut() {
                 pb.message(format!("Loading {} [round   ] ", chat_ctx.chat_name.as_str()).as_str());
             }
             log::debug!("Round message {}", message.text());
-            types.get(ROUND).unwrap()
+            let current_type = types.get(ROUND).unwrap();
+            let mut file_name = doc.name().to_string();
+            file_name = format!("{}-{}", doc.id(), file_name);
+            let file_name = current_type.format(file_name);
+            let file_path = current_type.path().join(file_name.as_str());
+            let att_path = format!("../{}/{}", current_type.folder, file_name);
+            let attachment = Attachment::Round(FileInfo {
+                id: doc.id(),
+                path: att_path,
+            });
+            (attachment, file_path)
         } else if doc.is_voice_message() {
             if let Some(pb) = chat_ctx.pb.as_mut() {
                 pb.message(format!("Loading {} [voice   ] ", chat_ctx.chat_name.as_str()).as_str());
             }
             log::debug!("Voice message {}", message.text());
-            types.get(VOICE).unwrap()
+            let current_type = types.get(VOICE).unwrap();
+            let mut file_name = doc.name().to_string();
+            file_name = format!("{}-{}", doc.id(), file_name);
+            let file_name = current_type.format(file_name);
+            let file_path = current_type.path().join(file_name.as_str());
+            let att_path = format!("../{}/{}", current_type.folder, file_name);
+            let attachment = Attachment::Voice(FileInfo {
+                id: doc.id(),
+                path: att_path,
+            });
+            (attachment, file_path)
         } else {
             if let Some(pb) = chat_ctx.pb.as_mut() {
                 pb.message(format!("Loading {} [file    ] ", chat_ctx.chat_name.as_str()).as_str());
             }
             log::debug!("File {}", message.text());
-            types.get(FILE).unwrap()
+            let current_type = types.get(FILE).unwrap();
+            let mut file_name = doc.name().to_string();
+            file_name = format!("{}-{}", doc.id(), file_name);
+            let file_name = current_type.format(file_name);
+            let file_path = current_type.path().join(file_name.as_str());
+            let photo_path = format!("../{}/{}", current_type.folder, file_name);
+            let attachment = Attachment::File(FileInfo {
+                id: doc.id(),
+                path: photo_path,
+            });
+            (attachment, file_path)
         };
 
-        let mut file_name = doc.name().to_string();
-        file_name = format!("{}-{}", doc.id(), file_name);
-        let file_name = current_type.format(file_name);
-        let file_path = current_type.path().join(file_name.as_str());
         // TODO handle file migrate
         let _ = doc.download(&file_path).await;
-        Some((current_type, file_name, doc.id()))
+        Some(attachment)
     } else {
         None
     };
 
-    if let Some((current_type, file_name, id)) = res {
-        let photo_path = format!("../{}/{}", current_type.folder, file_name);
-        let attachment_type = current_type.type_name.as_str();
-        let attachment_info = FileInfo {
-            id,
-            attachment_type: attachment_type.to_string(),
-            path: photo_path,
-        };
-        let message_info = msg_to_file_info(&message, attachment_info);
+    if let Some(attachment) = res {
+        let message_info = msg_to_file_info(&message, attachment);
         chat_ctx.messages_accumulator.push(message_info);
         Ok(())
     } else {
