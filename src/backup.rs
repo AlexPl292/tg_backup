@@ -226,10 +226,6 @@ async fn extract_dialog(
         in_progress.write_data(&info);
     }
 
-    let info_file = File::create(info_file_path).unwrap();
-    serde_json::to_writer_pretty(&info_file, &chat_to_info(chat, start_loading_time.clone()))
-        .unwrap();
-
     let mut messages = client_handle
         .iter_messages(chat)
         .offset_date(start_loading_time.timestamp() as i32);
@@ -239,11 +235,24 @@ async fn extract_dialog(
     let mut last_message: Option<(i32, DateTime<Utc>)> = None;
     let total_messages = messages.total().await.unwrap_or(0);
 
+    // Save info file
+    let info_file = File::create(info_file_path).unwrap();
+    serde_json::to_writer_pretty(
+        &info_file,
+        &chat_to_info(chat, start_loading_time.clone(), total_messages),
+    )
+    .unwrap();
+
+    // Initialize progress bar
     let mut pb = ProgressBar::new(total_messages as u64);
     pb.message(format!("Loading {} [messages] ", chat.name()).as_str());
     chat_ctx.pb = Some(pb);
 
-    log::info!("Start loading loop. Counter: {}, total_size: {}", counter, total_messages);
+    log::info!(
+        "Start loading loop. Counter: {}, total_size: {}",
+        counter,
+        total_messages
+    );
 
     let mut pivot_time = chrono::offset::Utc::now();
 
@@ -257,7 +266,9 @@ async fn extract_dialog(
                         in_progress.remove_file();
                         log::info!("Finish writing data: {}", chat.name());
                         if let Some(pb) = chat_ctx.pb.as_mut() {
-                            pb.finish_println(format!("Finish loading of {}", chat.name()).as_str());
+                            pb.finish_println(
+                                format!("Finish loading of {}", chat.name()).as_str(),
+                            );
                         }
                         return Ok(());
                     }
@@ -270,13 +281,7 @@ async fn extract_dialog(
                         print!(".")
                     }
                     let info = if let Some((id, time)) = last_message {
-                        InProgressInfo::create(
-                            time,
-                            end_loading_time,
-                            Some(id),
-                            counter,
-                            &chat_ctx,
-                        )
+                        InProgressInfo::create(time, end_loading_time, Some(id), counter, &chat_ctx)
                     } else {
                         InProgressInfo::create(
                             start_loading_time,
