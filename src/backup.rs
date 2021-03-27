@@ -267,7 +267,7 @@ async fn extract_dialog(
                     log::error!("Error while loading");
                     if let Some(pb) = chat_ctx.pb.as_mut() {
                         pb.message("Error while loading");
-                        println!(".")
+                        print!(".")
                     }
                     let info = if let Some((id, time)) = last_message {
                         InProgressInfo::create(
