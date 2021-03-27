@@ -381,7 +381,7 @@ async fn save_message(message: &mut Message, chat_ctx: &mut ChatContext) -> Resu
             return Ok(());
         }
         let id = id.unwrap();
-        let file_name = format!("photo@{}.jpg", id);
+        let file_name = format!("{}@photo.jpg", id);
         let photos_path = current_type.path().join(file_name.as_str());
         let thumbs = photo.thumbs();
         let first = thumbs.largest();
@@ -417,7 +417,7 @@ async fn save_message(message: &mut Message, chat_ctx: &mut ChatContext) -> Resu
             log::debug!("Round message {}", message.text());
             let current_type = types.get(ROUND).unwrap();
             let mut file_name = doc.name().to_string();
-            file_name = format!("{}-{}", doc.id(), file_name);
+            file_name = format!("{}@{}", doc.id(), file_name);
             let file_name = current_type.format(file_name);
             let file_path = current_type.path().join(file_name.as_str());
             let att_path = format!("../{}/{}", current_type.folder, file_name);
@@ -433,7 +433,7 @@ async fn save_message(message: &mut Message, chat_ctx: &mut ChatContext) -> Resu
             log::debug!("Voice message {}", message.text());
             let current_type = types.get(VOICE).unwrap();
             let mut file_name = doc.name().to_string();
-            file_name = format!("{}-{}", doc.id(), file_name);
+            file_name = format!("{}@{}", doc.id(), file_name);
             let file_name = current_type.format(file_name);
             let file_path = current_type.path().join(file_name.as_str());
             let att_path = format!("../{}/{}", current_type.folder, file_name);
@@ -449,7 +449,7 @@ async fn save_message(message: &mut Message, chat_ctx: &mut ChatContext) -> Resu
             log::debug!("File {}", message.text());
             let current_type = types.get(FILE).unwrap();
             let mut file_name = doc.name().to_string();
-            file_name = format!("{}-{}", doc.id(), file_name);
+            file_name = format!("{}@{}", doc.id(), file_name);
             let file_name = current_type.format(file_name);
             let file_path = current_type.path().join(file_name.as_str());
             let photo_path = format!("../{}/{}", current_type.folder, file_name);
