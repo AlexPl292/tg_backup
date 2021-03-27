@@ -1,6 +1,8 @@
 use std::fs;
 use std::fs::File;
+use std::io::BufReader;
 use std::path::Path;
+use std::sync::Arc;
 use std::thread::sleep;
 
 use chrono::{DateTime, Utc};
@@ -21,8 +23,6 @@ use crate::opts::Opts;
 use crate::types::{
     chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo,
 };
-use std::io::BufReader;
-use std::sync::Arc;
 
 const PATH: &'static str = "backup";
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
@@ -248,14 +248,24 @@ async fn extract_dialog(
                     }
                 }
                 counter += 1;
-                last_message = Some((message.id(), message.date()));
                 let saving_result = save_message(&mut message, &mut chat_ctx).await;
                 if let Err(_) = saving_result {
                     if let Some(pb) = chat_ctx.pb.as_mut() {
-                        pb.finish();
+                        pb.finish_println("Error while loading");
                     }
+                    if let Some((id, time)) = last_message {
+                        in_progress.write_data(InProgressInfo::create(
+                            time,
+                            end_loading_time,
+                            Some(id),
+                            &chat_ctx,
+                            &main_ctx,
+                        ));
+                    }
+                    chat_ctx.force_drop_messages();
                     return Err(());
                 }
+                last_message = Some((message.id(), message.date()));
                 if let Some(pb) = chat_ctx.pb.as_mut() {
                     pb.set(counter as u64);
                     pb.message(format!("Loading {} [messages] ", chat.name()).as_str());
