@@ -21,7 +21,7 @@ use crate::context::{ChatContext, MainContext, FILE, PHOTO, ROUND, VOICE};
 use crate::in_progress::{InProgress, InProgressInfo};
 use crate::opts::Opts;
 use crate::types::{
-    chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo,
+    chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo, Member,
 };
 
 const PATH: &'static str = "backup";
@@ -167,11 +167,12 @@ async fn extract_dialog(
         return Ok(());
     }
 
-    if let Chat::User(_) = chat {
+    let user = if let Chat::User(user) = chat {
+        user
     } else {
         // Save only one-to-one dialogs at the moment
         return Ok(());
-    }
+    };
 
     log::info!("Saving chat. name: {} id: {}", chat.name(), chat.id());
 
@@ -244,6 +245,20 @@ async fn extract_dialog(
         &chat_to_info(chat, global_loading_from, total_messages),
     )
     .unwrap();
+
+    // Save members
+    let members = vec![
+        Member::Me,
+        Member::User {
+            id: user.id(),
+            username: user.username().map(|x| x.to_string()),
+        },
+    ];
+    let members_folder = chat_path.join("members");
+    let _ = fs::create_dir(&members_folder);
+    let members_path = members_folder.join("members.json");
+    let members_file = File::create(members_path).unwrap();
+    serde_json::to_writer_pretty(&members_file, &members).unwrap();
 
     // Initialize progress bar
     let mut pb = ProgressBar::new(total_messages as u64);

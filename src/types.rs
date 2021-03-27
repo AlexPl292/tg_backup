@@ -35,6 +35,13 @@ pub enum Attachment {
     Error(String),
 }
 
+#[derive(Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum Member {
+    Me,
+    User { id: i32, username: Option<String> },
+}
+
 pub fn msg_to_info(data: &Message) -> MessageInfo {
     MessageInfo {
         text: data.text().to_string(),
