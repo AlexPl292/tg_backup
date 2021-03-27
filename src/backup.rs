@@ -188,9 +188,12 @@ async fn extract_dialog(
     let mut end_loading_time: Option<DateTime<Utc>> = None;
     let mut last_loaded_id: Option<i32> = None;
     let mut counter = chat_ctx.accumulator_counter * main_ctx.batch_size;
+    let mut global_loading_from = main_ctx.date.clone();
 
     let in_progress = InProgress::create(chat_path);
     if info_file_path.exists() {
+        let file = BufReader::new(File::open(&info_file_path).unwrap());
+        let chat_info: ChatInfo = serde_json::from_reader(file).unwrap();
         if in_progress.exists() {
             log::info!("Loading data from in_progress file");
             let in_progress_data = in_progress.read_data();
@@ -201,9 +204,8 @@ async fn extract_dialog(
             chat_ctx.file_issue_count = in_progress_data.file_issue_count;
             counter = in_progress_data.messages_counter;
             last_loaded_id = in_progress_data.last_loaded_id;
+            global_loading_from = chat_info.loaded_up_to;
         } else {
-            let file = BufReader::new(File::open(&info_file_path).unwrap());
-            let chat_info: ChatInfo = serde_json::from_reader(file).unwrap();
             end_loading_time = Some(chat_info.loaded_up_to);
             let info = InProgressInfo::create(
                 start_loading_time,
@@ -239,7 +241,7 @@ async fn extract_dialog(
     let info_file = File::create(info_file_path).unwrap();
     serde_json::to_writer_pretty(
         &info_file,
-        &chat_to_info(chat, start_loading_time.clone(), total_messages),
+        &chat_to_info(chat, global_loading_from, total_messages),
     )
     .unwrap();
 
@@ -249,9 +251,11 @@ async fn extract_dialog(
     chat_ctx.pb = Some(pb);
 
     log::info!(
-        "Start loading loop. Counter: {}, total_size: {}",
+        "Start loading loop. Counter: {}, total_size: {}, from: {}, until: {:?}",
         counter,
-        total_messages
+        total_messages,
+        start_loading_time,
+        end_loading_time,
     );
 
     let mut pivot_time = chrono::offset::Utc::now();
