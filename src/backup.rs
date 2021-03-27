@@ -192,6 +192,7 @@ async fn extract_dialog(
     let in_progress = InProgress::create(chat_path);
     if info_file_path.exists() {
         if in_progress.exists() {
+            log::info!("Loading data from in_progress file");
             let in_progress_data = in_progress.read_data();
             start_loading_time = in_progress_data.extract_from;
             end_loading_time = in_progress_data.extract_until;
@@ -204,23 +205,25 @@ async fn extract_dialog(
             let file = BufReader::new(File::open(&info_file_path).unwrap());
             let chat_info: ChatInfo = serde_json::from_reader(file).unwrap();
             end_loading_time = Some(chat_info.loaded_up_to);
-            in_progress.write_data(InProgressInfo::create(
+            let info = InProgressInfo::create(
                 start_loading_time,
                 end_loading_time,
                 None,
+                counter,
                 &chat_ctx,
-                &main_ctx,
-            ));
+            );
+            in_progress.write_data(&info);
         }
     } else {
         // Create in progress file
-        in_progress.write_data(InProgressInfo::create(
+        let info = InProgressInfo::create(
             start_loading_time,
             end_loading_time,
             None,
+            counter,
             &chat_ctx,
-            &main_ctx,
-        ));
+        );
+        in_progress.write_data(&info);
     }
 
     let info_file = File::create(info_file_path).unwrap();
@@ -240,6 +243,10 @@ async fn extract_dialog(
     pb.message(format!("Loading {} [messages] ", chat.name()).as_str());
     chat_ctx.pb = Some(pb);
 
+    log::info!("Start loading loop. Counter: {}, total_size: {}", counter, total_messages);
+
+    let mut pivot_time = chrono::offset::Utc::now();
+
     loop {
         let msg = messages.next().await;
         match msg {
@@ -250,39 +257,48 @@ async fn extract_dialog(
                         in_progress.remove_file();
                         log::info!("Finish writing data: {}", chat.name());
                         if let Some(pb) = chat_ctx.pb.as_mut() {
-                            pb.message(format!("Finish loading of {}", chat.name()).as_str());
-                            println!()
+                            pb.finish_println(format!("Finish loading of {}", chat.name()).as_str());
                         }
                         return Ok(());
                     }
                 }
-                counter += 1;
                 let saving_result = save_message(&mut message, &mut chat_ctx).await;
                 if let Err(_) = saving_result {
+                    log::error!("Error while loading");
                     if let Some(pb) = chat_ctx.pb.as_mut() {
                         pb.message("Error while loading");
-                        println!()
+                        println!(".")
                     }
-                    if let Some((id, time)) = last_message {
-                        in_progress.write_data(InProgressInfo::create(
+                    let info = if let Some((id, time)) = last_message {
+                        InProgressInfo::create(
                             time,
                             end_loading_time,
                             Some(id),
+                            counter,
                             &chat_ctx,
-                            &main_ctx,
-                        ));
+                        )
                     } else {
-                        in_progress.write_data(InProgressInfo::create(
+                        InProgressInfo::create(
                             start_loading_time,
                             end_loading_time,
                             last_loaded_id,
+                            counter,
                             &chat_ctx,
-                            &main_ctx,
-                        ));
-                    }
+                        )
+                    };
+                    in_progress.write_data(&info);
+                    log::info!("Force drop messages. Counter: {}", info.messages_counter);
                     chat_ctx.force_drop_messages();
                     return Err(());
                 }
+
+                let current_time = chrono::offset::Utc::now();
+                let diff = current_time - pivot_time;
+                if diff > chrono::Duration::seconds(10) {
+                    log::info!("Loading messages... {}/{}", counter, total_messages);
+                    pivot_time = current_time;
+                }
+
                 last_message = Some((message.id(), message.date()));
                 if let Some(pb) = chat_ctx.pb.as_mut() {
                     pb.set(counter as u64);
@@ -290,14 +306,16 @@ async fn extract_dialog(
                 }
                 let dropped = chat_ctx.drop_messages(&main_ctx);
                 if dropped {
-                    in_progress.write_data(InProgressInfo::create(
+                    let info = InProgressInfo::create(
                         last_message.unwrap().1,
                         end_loading_time,
                         Some(last_message.unwrap().0),
+                        counter,
                         &chat_ctx,
-                        &main_ctx,
-                    ));
+                    );
+                    in_progress.write_data(&info);
                 }
+                counter += 1;
             }
             Ok(None) => {
                 chat_ctx.force_drop_messages();
@@ -330,13 +348,14 @@ async fn extract_dialog(
     }
 
     if let Some(message) = last_message {
-        in_progress.write_data(InProgressInfo::create(
+        let info = InProgressInfo::create(
             message.1,
             end_loading_time,
             Some(message.0),
+            counter,
             &chat_ctx,
-            &main_ctx,
-        ));
+        );
+        in_progress.write_data(&info);
     }
 
     chat_ctx.force_drop_messages();
@@ -384,7 +403,7 @@ async fn save_message(message: &mut Message, chat_ctx: &mut ChatContext) -> Resu
             } else {
                 chat_ctx.file_issue = id;
                 chat_ctx.file_issue_count = 0;
-                log::error!("Cannot download photo");
+                log::error!("Cannot download photo: {}", e);
                 return Err(());
             }
         } else {

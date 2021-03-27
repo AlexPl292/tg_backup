@@ -1,4 +1,4 @@
-use crate::context::{ChatContext, MainContext};
+use crate::context::ChatContext;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -25,16 +25,15 @@ impl InProgressInfo {
         extract_from: DateTime<Utc>,
         extract_until: Option<DateTime<Utc>>,
         last_loaded_id: Option<i32>,
+        messages_counter: i32,
         chat_ctx: &ChatContext,
-        main_context: &MainContext,
     ) -> InProgressInfo {
         InProgressInfo {
             extract_from,
             extract_until,
             last_loaded_id,
             accumulator_counter: chat_ctx.accumulator_counter,
-            messages_counter: chat_ctx.accumulator_counter * main_context.batch_size
-                + (chat_ctx.messages_accumulator.len() as i32),
+            messages_counter,
 
             file_issue: chat_ctx.file_issue,
             file_issue_count: chat_ctx.file_issue_count,
@@ -62,9 +61,9 @@ impl InProgress {
         return serde_json::from_reader(file).unwrap();
     }
 
-    pub fn write_data(&self, data: InProgressInfo) {
+    pub fn write_data(&self, data: &InProgressInfo) {
         let in_progress_file = File::create(&self.path).unwrap();
-        serde_json::to_writer_pretty(&in_progress_file, &data).unwrap();
+        serde_json::to_writer_pretty(&in_progress_file, data).unwrap();
     }
 
     pub fn remove_file(&self) {
