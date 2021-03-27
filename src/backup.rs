@@ -17,7 +17,7 @@ use tokio::task::JoinHandle;
 use tokio::time::Duration;
 
 use crate::connector;
-use crate::context::{ChatContext, MainContext, FILE, PHOTO, ROUND, VOICE, MainMutContext};
+use crate::context::{ChatContext, MainContext, MainMutContext, FILE, PHOTO, ROUND, VOICE};
 use crate::in_progress::{InProgress, InProgressInfo};
 use crate::opts::Opts;
 use crate::types::{
@@ -63,7 +63,12 @@ pub async fn start_backup(opts: Opts) {
     while !finish_loop {
         let (client_handle, _main_handle) = get_connection().await;
 
-        let result = start_iteration(client_handle, arc_main_ctx.clone(), main_mut_context.clone()).await;
+        let result = start_iteration(
+            client_handle,
+            arc_main_ctx.clone(),
+            main_mut_context.clone(),
+        )
+        .await;
 
         finish_loop = match result {
             Ok(_) => {
@@ -114,7 +119,8 @@ async fn start_iteration(
                 let my_main_context = main_ctx.clone();
                 let my_main_mut_context = main_mut_ctx.clone();
                 let result = task::spawn(async move {
-                    extract_dialog(client_handle, dialog, my_main_context, my_main_mut_context).await
+                    extract_dialog(client_handle, dialog, my_main_context, my_main_mut_context)
+                        .await
                 })
                 .await
                 .unwrap();
