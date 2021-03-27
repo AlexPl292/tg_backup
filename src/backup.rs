@@ -419,15 +419,20 @@ async fn save_message(message: &mut Message, chat_ctx: &mut ChatContext) -> Resu
             if chat_ctx.file_issue == id {
                 chat_ctx.file_issue_count += 1;
                 if chat_ctx.file_issue_count > 5 {
+                    log::error!("Cannot download photo, no more attempts {}", e);
                     Some(Attachment::Error(format!("Cannot load: {}", e)))
                 } else {
-                    log::error!("Cannot download photo");
+                    log::warn!(
+                        "Cannot download photo, attempt {}, error: {}",
+                        chat_ctx.file_issue_count,
+                        e
+                    );
                     return Err(());
                 }
             } else {
                 chat_ctx.file_issue = id;
                 chat_ctx.file_issue_count = 0;
-                log::error!("Cannot download photo: {}", e);
+                log::warn!("Cannot download photo, first attempt: {}", e);
                 return Err(());
             }
         } else {
