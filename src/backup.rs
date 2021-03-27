@@ -250,7 +250,8 @@ async fn extract_dialog(
                         in_progress.remove_file();
                         log::info!("Finish writing data: {}", chat.name());
                         if let Some(pb) = chat_ctx.pb.as_mut() {
-                            pb.finish_print(format!("Finish loading of {}", chat.name()).as_str());
+                            pb.message(format!("Finish loading of {}", chat.name()).as_str());
+                            println!()
                         }
                         return Ok(());
                     }
@@ -259,7 +260,8 @@ async fn extract_dialog(
                 let saving_result = save_message(&mut message, &mut chat_ctx).await;
                 if let Err(_) = saving_result {
                     if let Some(pb) = chat_ctx.pb.as_mut() {
-                        pb.finish_println("Error while loading");
+                        pb.message("Error while loading");
+                        println!()
                     }
                     if let Some((id, time)) = last_message {
                         in_progress.write_data(InProgressInfo::create(
@@ -302,7 +304,7 @@ async fn extract_dialog(
                 in_progress.remove_file();
                 log::info!("Finish writing data: {}", chat.name());
                 if let Some(pb) = chat_ctx.pb.as_mut() {
-                    pb.finish_print(format!("Finish loading of {}", chat.name()).as_str());
+                    pb.finish_println(format!("Finish loading of {}", chat.name()).as_str());
                 }
                 return Ok(());
             }
@@ -339,9 +341,9 @@ async fn extract_dialog(
 
     chat_ctx.force_drop_messages();
 
-    if let Some(pb) = chat_ctx.pb.as_mut() {
-        pb.finish();
-    }
+    // if let Some(pb) = chat_ctx.pb.as_mut() {
+    //     pb.finish();
+    // }
     Ok(())
 }
 
