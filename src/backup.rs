@@ -193,7 +193,11 @@ async fn extract_dialog(
         return Ok(());
     };
 
-    let visual_id = format!("{}.{}", chat.name(), user.username().unwrap_or("NO_USERNAME"));
+    let visual_id = format!(
+        "{}.{}",
+        chat.name(),
+        user.username().unwrap_or("NO_USERNAME")
+    );
 
     log::info!("Saving chat. name: {} id: {}", chat.name(), chat.id());
 
@@ -274,6 +278,12 @@ async fn extract_dialog(
         Member::User {
             id: user.id(),
             username: user.username().map(|x| x.to_string()),
+            first_name: user.first_name().to_string(),
+            last_name: user.last_name().map(|x| x.to_string()),
+            verified: user.verified(),
+            contact: user.contact(),
+            mutual_contact: user.mutual_contact(),
+            deleted: user.deleted(),
         },
     ];
     let members_folder = chat_path.join("members");

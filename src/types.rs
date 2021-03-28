@@ -17,6 +17,12 @@ pub struct MessageInfo {
     id: i32,
     pub date: DateTime<Utc>,
     attachment: Attachment,
+    edit_date: Option<DateTime<Utc>>,
+    mentioned: bool,
+    outgoing: bool,
+    pinned: bool,
+    sender_id: Option<i32>,
+    sender_name: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -39,7 +45,16 @@ pub enum Attachment {
 #[serde(tag = "type")]
 pub enum Member {
     Me,
-    User { id: i32, username: Option<String> },
+    User {
+        id: i32,
+        username: Option<String>,
+        first_name: String,
+        last_name: Option<String>,
+        verified: bool,
+        contact: bool,
+        mutual_contact: bool,
+        deleted: bool,
+    },
 }
 
 pub fn msg_to_info(data: &Message) -> MessageInfo {
@@ -48,6 +63,12 @@ pub fn msg_to_info(data: &Message) -> MessageInfo {
         id: data.id(),
         date: data.date(),
         attachment: Attachment::None,
+        edit_date: data.edit_date(),
+        mentioned: data.mentioned(),
+        outgoing: data.outgoing(),
+        pinned: data.pinned(),
+        sender_id: data.sender().map(|x| x.id()),
+        sender_name: data.sender().map(|x| x.name().to_string()),
     }
 }
 
@@ -57,6 +78,12 @@ pub fn msg_to_file_info(data: &Message, attachment: Attachment) -> MessageInfo {
         id: data.id(),
         date: data.date(),
         attachment,
+        edit_date: data.edit_date(),
+        mentioned: data.mentioned(),
+        outgoing: data.outgoing(),
+        pinned: data.pinned(),
+        sender_id: data.sender().map(|x| x.id()),
+        sender_name: data.sender().map(|x| x.name().to_string()),
     }
 }
 
