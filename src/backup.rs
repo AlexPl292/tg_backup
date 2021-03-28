@@ -244,6 +244,7 @@ async fn extract_dialog(
     let mut last_loaded_id: Option<i32> = None;
     let mut counter = chat_ctx.accumulator_counter * main_ctx.batch_size;
     let mut global_loading_from = main_ctx.date.clone();
+    let mut amount_of_already_loaded_messages: usize = 0;
 
     let in_progress = InProgress::create(chat_path);
     if info_file_path.exists() {
@@ -262,6 +263,7 @@ async fn extract_dialog(
             global_loading_from = chat_info.loaded_up_to;
         } else {
             end_loading_time = Some(chat_info.loaded_up_to);
+            amount_of_already_loaded_messages = chat_info.total_messages;
             let info = InProgressInfo::create(
                 start_loading_time,
                 end_loading_time,
@@ -291,6 +293,7 @@ async fn extract_dialog(
     }
     let mut last_message: Option<(i32, DateTime<Utc>)> = None;
     let total_messages = messages.total().await.unwrap_or(0);
+    let amount_of_messages_to_load = total_messages - amount_of_already_loaded_messages;
 
     // Save info file
     let info_file = File::create(info_file_path).unwrap();
@@ -309,14 +312,14 @@ async fn extract_dialog(
     serde_json::to_writer_pretty(&members_file, &members).unwrap();
 
     // Initialize progress bar
-    let mut pb = ProgressBar::new(total_messages as u64);
+    let mut pb = ProgressBar::new(amount_of_messages_to_load as u64);
     pb.message(format!("Loading {} [messages] ", visual_id).as_str());
     chat_ctx.pb = Some(pb);
 
     log::info!(
         "Start loading loop. Counter: {}, total_size: {}, from: {}, until: {:?}",
         counter,
-        total_messages,
+        amount_of_messages_to_load,
         start_loading_time,
         end_loading_time,
     );
@@ -370,7 +373,11 @@ async fn extract_dialog(
                 let current_time = chrono::offset::Utc::now();
                 let diff = current_time - pivot_time;
                 if diff > chrono::Duration::seconds(10) {
-                    log::info!("Loading messages... {}/{}", counter, total_messages);
+                    log::info!(
+                        "Loading messages... {}/{}",
+                        counter,
+                        amount_of_messages_to_load
+                    );
                     pivot_time = current_time;
                 }
 

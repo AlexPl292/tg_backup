@@ -5,10 +5,10 @@ use chrono::{DateTime, Utc};
 
 #[derive(Serialize, Deserialize)]
 pub struct ChatInfo {
-    name: String,
-    id: i32,
+    pub name: String,
+    pub id: i32,
     pub loaded_up_to: DateTime<Utc>,
-    total_messages: usize,
+    pub total_messages: usize,
 }
 
 #[derive(Serialize, Deserialize)]
