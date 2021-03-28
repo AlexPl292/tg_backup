@@ -29,21 +29,25 @@ const PATH: &'static str = "backup";
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 
 pub async fn start_backup(opts: Opts) {
+    // Start auth subcommand
     if let Some(_) = opts.auth {
         connector::auth().await;
         return;
     }
 
+    // Check if authentication is needed
     if connector::need_auth() {
         println!("Start tg_backup with `auth` command");
         return;
     }
 
+    // Create backup directory
     if opts.clean {
         let _ = fs::remove_dir_all(PATH);
     }
     let _ = fs::create_dir(PATH);
 
+    // Initialize logs
     let log_dir = format!("{}/logs", PATH);
     let _ = fs::create_dir(log_dir.as_str());
     let log_path = format!("{}/tg_backup.log", log_dir);
@@ -52,6 +56,7 @@ pub async fn start_backup(opts: Opts) {
     log::info!("Initializing telegram backup.");
     log::info!("Version v{}", VERSION.unwrap_or("Unknown"));
 
+    // Initialize main context
     let main_ctx =
         save_current_information(opts.included_chats, opts.excluded_chats, opts.batch_size);
     let arc_main_ctx = Arc::new(main_ctx);
@@ -60,6 +65,7 @@ pub async fn start_backup(opts: Opts) {
         already_finished: vec![],
     }));
 
+    // Start backup loop
     let mut finish_loop = false;
     while !finish_loop {
         let (client_handle, _main_handle) = get_connection().await;
