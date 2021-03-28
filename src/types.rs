@@ -1,4 +1,4 @@
-use grammers_client::types::{Chat, Message};
+use grammers_client::types::{Chat, Message, User};
 use serde::{Deserialize, Serialize};
 
 use chrono::{DateTime, Utc};
@@ -56,6 +56,37 @@ pub enum Member {
         mutual_contact: bool,
         deleted: bool,
     },
+}
+
+impl From<User> for Member {
+    fn from(user: User) -> Self {
+        Member::User {
+            id: user.id(),
+            username: user.username().map(|x| x.to_string()),
+            first_name: user.first_name().to_string(),
+            last_name: user.last_name().map(|x| x.to_string()),
+            verified: user.verified(),
+            contact: user.contact(),
+            mutual_contact: user.mutual_contact(),
+            deleted: user.deleted(),
+        }
+    }
+}
+
+// TODO Omg rust, I don't know how to do it better
+impl From<&User> for Member {
+    fn from(user: &User) -> Self {
+        Member::User {
+            id: user.id(),
+            username: user.username().map(|x| x.to_string()),
+            first_name: user.first_name().to_string(),
+            last_name: user.last_name().map(|x| x.to_string()),
+            verified: user.verified(),
+            contact: user.contact(),
+            mutual_contact: user.mutual_contact(),
+            deleted: user.deleted(),
+        }
+    }
 }
 
 pub fn msg_to_info(data: &Message) -> MessageInfo {

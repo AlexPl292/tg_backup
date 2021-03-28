@@ -65,6 +65,11 @@ pub async fn start_backup(opts: Opts) {
         already_finished: vec![],
     }));
 
+    // Save me
+    let (client_handle, main_handle) = get_connection().await;
+    save_me(client_handle).await;
+    drop(main_handle);
+
     // Start backup loop
     let mut finish_loop = false;
     while !finish_loop {
@@ -106,6 +111,22 @@ async fn get_connection() -> (ClientHandle, JoinHandle<Result<(), ReadError>>) {
             panic!("Cannot connect to telegram")
         };
         sleep(Duration::from_secs(time_sec))
+    }
+}
+
+async fn save_me(mut client_handle: ClientHandle) {
+    let me_result = client_handle.get_me().await;
+    match me_result {
+        Ok(me) => {
+            let me_member: Member = me.into();
+            let path_string = format!("{}/me.json", PATH);
+            let path = Path::new(path_string.as_str());
+            let file = File::create(path).unwrap();
+            serde_json::to_writer_pretty(&file, &me_member).unwrap();
+        }
+        Err(e) => {
+            log::error!("Cannot save information about me: {}", e)
+        }
     }
 }
 
@@ -280,19 +301,7 @@ async fn extract_dialog(
     .unwrap();
 
     // Save members
-    let members = vec![
-        Member::Me,
-        Member::User {
-            id: user.id(),
-            username: user.username().map(|x| x.to_string()),
-            first_name: user.first_name().to_string(),
-            last_name: user.last_name().map(|x| x.to_string()),
-            verified: user.verified(),
-            contact: user.contact(),
-            mutual_contact: user.mutual_contact(),
-            deleted: user.deleted(),
-        },
-    ];
+    let members = vec![Member::Me, user.into()];
     let members_folder = chat_path.join("members");
     let _ = fs::create_dir(&members_folder);
     let members_path = members_folder.join("members.json");
