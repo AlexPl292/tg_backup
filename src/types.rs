@@ -37,6 +37,7 @@ pub enum Attachment {
     Photo(FileInfo),
     Voice(FileInfo),
     Round(FileInfo),
+    PhotoExpired,
     None,
     Error(String),
 }

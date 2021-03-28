@@ -20,6 +20,7 @@ use crate::connector;
 use crate::context::{ChatContext, MainContext, MainMutContext, FILE, PHOTO, ROUND, VOICE};
 use crate::in_progress::{InProgress, InProgressInfo};
 use crate::opts::Opts;
+use crate::types::Attachment::PhotoExpired;
 use crate::types::{
     chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo, Member,
 };
@@ -436,45 +437,42 @@ async fn save_message(message: &mut Message, chat_ctx: &mut ChatContext) -> Resu
         }
         log::debug!("Loading photo {}", message.text());
         let current_type = types.get(PHOTO).unwrap();
-        let id = photo.id();
-        if let None = id {
-            // TODO handle this
-            // Photo has been expired
-            return Ok(());
-        }
-        let id = id.unwrap();
-        let file_name = format!("{}@photo.jpg", id);
-        let photos_path = current_type.path().join(file_name.as_str());
-        let thumbs = photo.thumbs();
-        let first = thumbs.largest();
-        let downloaded = first.unwrap().download(&photos_path).await;
-        let photo_path = format!("../{}/{}", current_type.folder, file_name);
-        let attachment = Attachment::Photo(FileInfo {
-            id,
-            path: photo_path,
-        });
-        if let Err(e) = downloaded {
-            if chat_ctx.file_issue == id {
-                chat_ctx.file_issue_count += 1;
-                if chat_ctx.file_issue_count > 5 {
-                    log::error!("Cannot download photo, no more attempts {}", e);
-                    Some(Attachment::Error(format!("Cannot load: {}", e)))
+        if let Some(id) = photo.id() {
+            let file_name = format!("{}@photo.jpg", id);
+            let photos_path = current_type.path().join(file_name.as_str());
+            let thumbs = photo.thumbs();
+            let first = thumbs.largest();
+            let downloaded = first.unwrap().download(&photos_path).await;
+            let photo_path = format!("../{}/{}", current_type.folder, file_name);
+            let attachment = Attachment::Photo(FileInfo {
+                id,
+                path: photo_path,
+            });
+            if let Err(e) = downloaded {
+                if chat_ctx.file_issue == id {
+                    chat_ctx.file_issue_count += 1;
+                    if chat_ctx.file_issue_count > 5 {
+                        log::error!("Cannot download photo, no more attempts {}", e);
+                        Some(Attachment::Error(format!("Cannot load: {}", e)))
+                    } else {
+                        log::warn!(
+                            "Cannot download photo, attempt {}, error: {}",
+                            chat_ctx.file_issue_count,
+                            e
+                        );
+                        return Err(());
+                    }
                 } else {
-                    log::warn!(
-                        "Cannot download photo, attempt {}, error: {}",
-                        chat_ctx.file_issue_count,
-                        e
-                    );
+                    chat_ctx.file_issue = id;
+                    chat_ctx.file_issue_count = 0;
+                    log::warn!("Cannot download photo, first attempt: {}", e);
                     return Err(());
                 }
             } else {
-                chat_ctx.file_issue = id;
-                chat_ctx.file_issue_count = 0;
-                log::warn!("Cannot download photo, first attempt: {}", e);
-                return Err(());
+                Some(attachment)
             }
         } else {
-            Some(attachment)
+            Some(PhotoExpired)
         }
     } else if let Some(mut doc) = message.document() {
         let (attachment, file_path) = if doc.is_round_message() {
