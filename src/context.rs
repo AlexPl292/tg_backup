@@ -47,14 +47,14 @@ pub struct ChatContext {
     pub(crate) messages_accumulator: Vec<MessageInfo>,
     pub(crate) accumulator_counter: i32,
     pub(crate) pb: Option<ProgressBar<Stdout>>,
-    pub(crate) chat_name: String,
+    pub(crate) visual_id: String,
 
     pub(crate) file_issue: i64,
     pub(crate) file_issue_count: i32,
 }
 
 impl ChatContext {
-    pub fn init(path: &Path, chat_name: String) -> ChatContext {
+    pub fn init(path: &Path, visual_id: String) -> ChatContext {
         let mut types = ChatContext::init_types();
         types.values_mut().for_each(|x| x.init_folder(path));
         ChatContext {
@@ -62,7 +62,7 @@ impl ChatContext {
             messages_accumulator: vec![],
             accumulator_counter: 0,
             pb: None,
-            chat_name,
+            visual_id,
             file_issue: 0,
             file_issue_count: 0,
         }

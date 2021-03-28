@@ -193,9 +193,12 @@ async fn extract_dialog(
         return Ok(());
     };
 
+    let visual_id = format!("{}.{}", chat.name(), user.username().unwrap_or("NO_USERNAME"));
+
     log::info!("Saving chat. name: {} id: {}", chat.name(), chat.id());
 
-    let chat_path_string = make_path(chat.id(), chat.name());
+    let id = chat.id();
+    let chat_path_string = format!("{}/chats/{}.{}", PATH, id, visual_id.as_str());
     let chat_path = Path::new(chat_path_string.as_str());
     if !chat_path.exists() {
         let _ = fs::create_dir_all(chat_path);
@@ -203,7 +206,7 @@ async fn extract_dialog(
 
     let info_file_path = chat_path.join("info.json");
 
-    let mut chat_ctx = ChatContext::init(chat_path, chat.name().to_string());
+    let mut chat_ctx = ChatContext::init(chat_path, visual_id.clone());
     let mut start_loading_time = main_ctx.date.clone();
     let mut end_loading_time: Option<DateTime<Utc>> = None;
     let mut last_loaded_id: Option<i32> = None;
@@ -281,7 +284,7 @@ async fn extract_dialog(
 
     // Initialize progress bar
     let mut pb = ProgressBar::new(total_messages as u64);
-    pb.message(format!("Loading {} [messages] ", chat.name()).as_str());
+    pb.message(format!("Loading {} [messages] ", visual_id).as_str());
     chat_ctx.pb = Some(pb);
 
     log::info!(
@@ -348,7 +351,7 @@ async fn extract_dialog(
                 last_message = Some((message.id(), message.date()));
                 if let Some(pb) = chat_ctx.pb.as_mut() {
                     pb.set(counter as u64);
-                    pb.message(format!("Loading {} [messages] ", chat.name()).as_str());
+                    pb.message(format!("Loading {} [messages] ", visual_id).as_str());
                 }
                 let dropped = chat_ctx.drop_messages(&main_ctx);
                 if dropped {
@@ -419,7 +422,7 @@ async fn save_message(message: &mut Message, chat_ctx: &mut ChatContext) -> Resu
     let types = &chat_ctx.types;
     let res = if let Some(photo) = message.photo() {
         if let Some(pb) = chat_ctx.pb.as_mut() {
-            pb.message(format!("Loading {} [photo   ] ", chat_ctx.chat_name.as_str()).as_str());
+            pb.message(format!("Loading {} [photo   ] ", chat_ctx.visual_id.as_str()).as_str());
         }
         log::debug!("Loading photo {}", message.text());
         let current_type = types.get(PHOTO).unwrap();
@@ -466,7 +469,7 @@ async fn save_message(message: &mut Message, chat_ctx: &mut ChatContext) -> Resu
     } else if let Some(mut doc) = message.document() {
         let (attachment, file_path) = if doc.is_round_message() {
             if let Some(pb) = chat_ctx.pb.as_mut() {
-                pb.message(format!("Loading {} [round   ] ", chat_ctx.chat_name.as_str()).as_str());
+                pb.message(format!("Loading {} [round   ] ", chat_ctx.visual_id.as_str()).as_str());
             }
             log::debug!("Round message {}", message.text());
             let current_type = types.get(ROUND).unwrap();
@@ -482,7 +485,7 @@ async fn save_message(message: &mut Message, chat_ctx: &mut ChatContext) -> Resu
             (attachment, file_path)
         } else if doc.is_voice_message() {
             if let Some(pb) = chat_ctx.pb.as_mut() {
-                pb.message(format!("Loading {} [voice   ] ", chat_ctx.chat_name.as_str()).as_str());
+                pb.message(format!("Loading {} [voice   ] ", chat_ctx.visual_id.as_str()).as_str());
             }
             log::debug!("Voice message {}", message.text());
             let current_type = types.get(VOICE).unwrap();
@@ -498,7 +501,7 @@ async fn save_message(message: &mut Message, chat_ctx: &mut ChatContext) -> Resu
             (attachment, file_path)
         } else {
             if let Some(pb) = chat_ctx.pb.as_mut() {
-                pb.message(format!("Loading {} [file    ] ", chat_ctx.chat_name.as_str()).as_str());
+                pb.message(format!("Loading {} [file    ] ", chat_ctx.visual_id.as_str()).as_str());
             }
             log::debug!("File {}", message.text());
             let current_type = types.get(FILE).unwrap();
@@ -547,8 +550,4 @@ async fn save_message(message: &mut Message, chat_ctx: &mut ChatContext) -> Resu
         chat_ctx.messages_accumulator.push(msg_to_info(message));
         Ok(())
     }
-}
-
-fn make_path(id: i32, name: &str) -> String {
-    return format!("{}/chats/{}.{}", PATH, id, name);
 }
