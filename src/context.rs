@@ -16,6 +16,7 @@ pub const VOICE: &'static str = "voice";
 
 pub struct MainMutContext {
     pub(crate) already_finished: Vec<i32>,
+    pub(crate) amount_of_dialogs: Option<usize>,
 }
 
 pub struct MainContext {

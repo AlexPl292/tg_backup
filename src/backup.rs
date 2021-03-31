@@ -63,6 +63,7 @@ pub async fn start_backup(opts: Opts) {
 
     let main_mut_context = Arc::new(RwLock::new(MainMutContext {
         already_finished: vec![],
+        amount_of_dialogs: None,
     }));
 
     // Save me
@@ -136,6 +137,16 @@ async fn start_iteration(
     main_mut_ctx: Arc<RwLock<MainMutContext>>,
 ) -> Result<(), ()> {
     let mut dialogs = client_handle.iter_dialogs();
+    if let Ok(mut ctx) = main_mut_ctx.write() {
+        if let None = ctx.amount_of_dialogs {
+            let total_dialogs_count = dialogs.total().await;
+            if let Ok(dialogs_count) = total_dialogs_count {
+                ctx.amount_of_dialogs = Some(dialogs_count);
+                log::info!("Saving {} dialogs", dialogs_count);
+                println!("Saving {} dialogs", dialogs_count);
+            }
+        }
+    }
     loop {
         let dialog_res = dialogs.next().await;
         match dialog_res {
