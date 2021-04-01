@@ -24,10 +24,7 @@ pub struct Opts {
     pub clean: bool,
 
     #[clap(long)]
-    pub session_file_path: Option<String>,
-
-    #[clap(long)]
-    pub session_file_name: Option<String>,
+    pub session_file: Option<String>,
 
     #[clap(subcommand)]
     pub auth: Option<SubCommand>,

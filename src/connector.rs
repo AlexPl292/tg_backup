@@ -9,8 +9,8 @@ use tokio::task::JoinHandle;
 
 const DEFAULT_FILE_NAME: &'static str = "tg_backup.session";
 
-pub fn need_auth(session_file_path: Option<String>, session_file_name: Option<String>) -> bool {
-    let path_result = make_path(session_file_path, session_file_name);
+pub fn need_auth(session_file: Option<String>) -> bool {
+    let path_result = path_or_default(session_file);
     let path = if let Ok(path) = path_result {
         path
     } else {
@@ -20,13 +20,12 @@ pub fn need_auth(session_file_path: Option<String>, session_file_name: Option<St
 }
 
 pub async fn create_connection(
-    session_file_path: Option<String>,
-    session_file_name: Option<String>,
+    session_file: Option<String>,
 ) -> Result<(ClientHandle, JoinHandle<Result<(), ReadError>>), AuthorizationError> {
     let api_id = env!("TG_ID").parse().expect("TG_ID invalid");
     let api_hash = env!("TG_HASH").to_string();
 
-    let path_result = make_path(session_file_path, session_file_name);
+    let path_result = path_or_default(session_file);
     let path = path_result.expect("Session file expected to be existed at this moment");
 
     log::info!("Connecting to Telegram...");
@@ -131,6 +130,28 @@ fn make_path(
 
     file_path.push(file_name);
     Ok(file_path)
+}
+
+fn path_or_default(session_file: Option<String>) -> Result<PathBuf, ()> {
+    if let Some(path) = session_file {
+        let mut path_buf = PathBuf::new();
+        path_buf.push(path);
+        Ok(path_buf)
+    } else {
+        let default_file_path = default_file_path();
+        let mut file_path = match default_file_path {
+            Ok(path) => path,
+            Err(error) => {
+                println!("{}", error);
+                return Err(());
+            }
+        };
+
+        let _ = fs::create_dir_all(file_path.as_path());
+
+        file_path.push(DEFAULT_FILE_NAME.to_string());
+        Ok(file_path)
+    }
 }
 
 fn default_file_path() -> Result<PathBuf, String> {
