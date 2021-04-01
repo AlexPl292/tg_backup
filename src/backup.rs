@@ -19,7 +19,7 @@ use tokio::time::Duration;
 use crate::connector;
 use crate::context::{ChatContext, MainContext, MainMutContext, FILE, PHOTO, ROUND, VOICE};
 use crate::in_progress::{InProgress, InProgressInfo};
-use crate::opts::Opts;
+use crate::opts::{Opts, SubCommand};
 use crate::types::Attachment::PhotoExpired;
 use crate::types::{
     chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo, Member,
@@ -30,13 +30,17 @@ const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 
 pub async fn start_backup(opts: Opts) {
     // Start auth subcommand
-    if let Some(_) = opts.auth {
-        connector::auth().await;
+    if let Some(auth) = opts.auth {
+        let SubCommand::Auth(auth_data) = auth;
+        connector::auth(auth_data.session_file_path, auth_data.session_file_name).await;
         return;
     }
 
+    let session_file_path = opts.session_file_path;
+    let session_file_name = opts.session_file_name;
+
     // Check if authentication is needed
-    if connector::need_auth() {
+    if connector::need_auth(session_file_path.clone(), session_file_name.clone()) {
         println!("Start tg_backup with `auth` command");
         return;
     }
@@ -67,14 +71,16 @@ pub async fn start_backup(opts: Opts) {
     }));
 
     // Save me
-    let (client_handle, main_handle) = get_connection().await;
+    let (client_handle, main_handle) =
+        get_connection(session_file_path.clone(), session_file_name.clone()).await;
     save_me(client_handle).await;
     drop(main_handle);
 
     // Start backup loop
     let mut finish_loop = false;
     while !finish_loop {
-        let (client_handle, _main_handle) = get_connection().await;
+        let (client_handle, _main_handle) =
+            get_connection(session_file_path.clone(), session_file_name.clone()).await;
 
         let result = start_iteration(
             client_handle,
@@ -96,10 +102,15 @@ pub async fn start_backup(opts: Opts) {
     }
 }
 
-async fn get_connection() -> (ClientHandle, JoinHandle<Result<(), ReadError>>) {
+async fn get_connection(
+    session_file_path: Option<String>,
+    session_file_name: Option<String>,
+) -> (ClientHandle, JoinHandle<Result<(), ReadError>>) {
     let mut counter = 0;
     loop {
-        let connect = connector::create_connection().await;
+        let connect =
+            connector::create_connection(session_file_path.clone(), session_file_name.clone())
+                .await;
         if let Ok((handle, main_loop)) = connect {
             return (handle, main_loop);
         }

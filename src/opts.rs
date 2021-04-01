@@ -23,6 +23,12 @@ pub struct Opts {
     #[clap(short, long)]
     pub clean: bool,
 
+    #[clap(long)]
+    pub session_file_path: Option<String>,
+
+    #[clap(long)]
+    pub session_file_name: Option<String>,
+
     #[clap(subcommand)]
     pub auth: Option<SubCommand>,
 }
@@ -35,4 +41,10 @@ pub enum SubCommand {
 }
 
 #[derive(Clap)]
-pub struct Auth {}
+pub struct Auth {
+    #[clap(long)]
+    pub session_file_path: Option<String>,
+
+    #[clap(long)]
+    pub session_file_name: Option<String>,
+}
