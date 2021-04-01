@@ -112,7 +112,7 @@ fn make_path(
 ) -> Result<PathBuf, ()> {
     let mut file_path = if let Some(file_path) = session_file_path {
         let mut buf = PathBuf::new();
-        buf.push(file_path);
+        buf.push(shellexpand::tilde(file_path.as_str()).into_owned());
         buf
     } else {
         let default_file_path = default_file_path();
@@ -135,7 +135,7 @@ fn make_path(
 fn path_or_default(session_file: Option<String>) -> Result<PathBuf, ()> {
     if let Some(path) = session_file {
         let mut path_buf = PathBuf::new();
-        path_buf.push(path);
+        path_buf.push(shellexpand::tilde(path.as_str()).into_owned());
         Ok(path_buf)
     } else {
         let default_file_path = default_file_path();
