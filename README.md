@@ -59,3 +59,7 @@ SUBCOMMANDS:
     help    
             Prints this message or the help of the given subcommand(s)
 ```
+
+### License
+
+tg_backup is licensed under the terms of the GNU Public License version 3 or any later version.
