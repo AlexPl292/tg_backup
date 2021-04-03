@@ -1,5 +1,9 @@
 /target
+
 .idea
+!.idea/copyright
+!.idea/scopes
+
 tg_backup.iml
 tg_backup.session
 backup
