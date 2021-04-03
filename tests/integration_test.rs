@@ -28,8 +28,10 @@ use tg_backup::{start_backup, Opts};
 async fn test_loading() {
     start_backup(Opts {
         included_chats: vec![1707414104, 1720199897],
+        excluded_chats: vec![],
         batch_size: 5,
         clean: true,
+        session_file: None,
         auth: None,
     })
     .await;
