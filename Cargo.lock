@@ -282,7 +282,7 @@ dependencies = [
 [[package]]
 name = "grammers-client"
 version = "0.2.0"
-source = "git+https://github.com/AlexPl292/grammers#0d12db75c14052fc2e6b5db56f5daccacd3dc95d"
+source = "git+https://github.com/AlexPl292/grammers#35418eb1cab5b2ecbbe9de2b341d047ead0b2848"
 dependencies = [
  "chrono",
  "grammers-crypto",
@@ -301,7 +301,7 @@ dependencies = [
 [[package]]
 name = "grammers-crypto"
 version = "0.2.0"
-source = "git+https://github.com/AlexPl292/grammers#0d12db75c14052fc2e6b5db56f5daccacd3dc95d"
+source = "git+https://github.com/AlexPl292/grammers#35418eb1cab5b2ecbbe9de2b341d047ead0b2848"
 dependencies = [
  "aes-soft",
  "aesni",
@@ -318,7 +318,7 @@ dependencies = [
 [[package]]
 name = "grammers-mtproto"
 version = "0.2.0"
-source = "git+https://github.com/AlexPl292/grammers#0d12db75c14052fc2e6b5db56f5daccacd3dc95d"
+source = "git+https://github.com/AlexPl292/grammers#35418eb1cab5b2ecbbe9de2b341d047ead0b2848"
 dependencies = [
  "bytes",
  "crc",
@@ -333,7 +333,7 @@ dependencies = [
 [[package]]
 name = "grammers-mtsender"
 version = "0.2.0"
-source = "git+https://github.com/AlexPl292/grammers#0d12db75c14052fc2e6b5db56f5daccacd3dc95d"
+source = "git+https://github.com/AlexPl292/grammers#35418eb1cab5b2ecbbe9de2b341d047ead0b2848"
 dependencies = [
  "bytes",
  "grammers-crypto",
@@ -346,7 +346,7 @@ dependencies = [
 [[package]]
 name = "grammers-session"
 version = "0.2.0"
-source = "git+https://github.com/AlexPl292/grammers#0d12db75c14052fc2e6b5db56f5daccacd3dc95d"
+source = "git+https://github.com/AlexPl292/grammers#35418eb1cab5b2ecbbe9de2b341d047ead0b2848"
 dependencies = [
  "grammers-crypto",
  "grammers-tl-gen",
@@ -358,7 +358,7 @@ dependencies = [
 [[package]]
 name = "grammers-tl-gen"
 version = "0.2.0"
-source = "git+https://github.com/AlexPl292/grammers#0d12db75c14052fc2e6b5db56f5daccacd3dc95d"
+source = "git+https://github.com/AlexPl292/grammers#35418eb1cab5b2ecbbe9de2b341d047ead0b2848"
 dependencies = [
  "grammers-tl-parser",
 ]
@@ -366,7 +366,7 @@ dependencies = [
 [[package]]
 name = "grammers-tl-parser"
 version = "1.0.0"
-source = "git+https://github.com/AlexPl292/grammers#0d12db75c14052fc2e6b5db56f5daccacd3dc95d"
+source = "git+https://github.com/AlexPl292/grammers#35418eb1cab5b2ecbbe9de2b341d047ead0b2848"
 dependencies = [
  "crc32fast",
 ]
@@ -374,7 +374,7 @@ dependencies = [
 [[package]]
 name = "grammers-tl-types"
 version = "0.2.0"
-source = "git+https://github.com/AlexPl292/grammers#0d12db75c14052fc2e6b5db56f5daccacd3dc95d"
+source = "git+https://github.com/AlexPl292/grammers#35418eb1cab5b2ecbbe9de2b341d047ead0b2848"
 dependencies = [
  "grammers-tl-gen",
  "grammers-tl-parser",
@@ -457,9 +457,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.91"
+version = "0.2.92"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8916b1f6ca17130ec6568feccee27c156ad12037880833a3b842a823236502e7"
+checksum = "56d855069fafbb9b344c0f962150cd2c1187975cb1c22c1522c240d8c4986714"
 
 [[package]]
 name = "locate-locale"
@@ -682,9 +682,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.24"
+version = "1.0.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e0704ee1a7e00d7bb417d0770ea303c1bccbabf0ef1667dae92b5967f5f8a71"
+checksum = "a152013215dca273577e18d2bf00fa862b89b24169fb78c4c95aeb07992c9cec"
 dependencies = [
  "unicode-xid",
 ]
@@ -854,9 +854,9 @@ checksum = "1e81da0851ada1f3e9d4312c704aa4f8806f0f9d69faaf8df2f3464b4a9437c2"
 
 [[package]]
 name = "syn"
-version = "1.0.64"
+version = "1.0.68"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3fd9d1e9976102a03c542daa2eff1b43f9d72306342f3f8b3ed5fb8908195d6f"
+checksum = "3ce15dd3ed8aa2f8eeac4716d6ef5ab58b6b9256db41d7e1a0224c2788e8fd87"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -901,6 +901,10 @@ dependencies = [
  "simple-logging",
  "tokio",
 ]
+
+[[package]]
+name = "tg_backup_connector"
+version = "0.1.0"
 
 [[package]]
 name = "thread-id"
