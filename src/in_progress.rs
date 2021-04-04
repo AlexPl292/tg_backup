@@ -1,5 +1,5 @@
 /*
- * tg_backup - software to backup data from Telegram messenger
+ * tg_backup - backup your messages from the Telegram messenger
  * Copyright 2021-2021 Alex Plate
  *
  * This file is part of tg_backup.

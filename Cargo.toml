@@ -5,7 +5,7 @@ authors = ["Alex Plate <AlexPl292@gmail.com>"]
 edition = "2018"
 license = "Apache-3.0"
 readme = "README.md"
-description = "Backup your Telegram messages"
+description = "Backup your messages from the Telegram messenger"
 repository = "https://github.com/AlexPl292/tg_backup"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

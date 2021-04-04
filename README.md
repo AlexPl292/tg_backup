@@ -1,6 +1,6 @@
 # tg_backup
 
-Backup your messages from Telegram messenger.
+Backup your messages from the Telegram messenger.
 
 `v0.1.0` this is a very initial version of the software.
 
