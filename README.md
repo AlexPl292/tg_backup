@@ -26,6 +26,13 @@ brew install tg_backup
 
 ### Options
 
+Please keep in mind that that list is updated along with main branch.  
+Use `--help` flag to get the list of options for your version.
+
+#### Main options
+
+`tg_backup --help`
+
 ```
 USAGE:
     tg_backup [FLAGS] [OPTIONS] [SUBCOMMAND]
@@ -58,7 +65,7 @@ OPTIONS:
             excluded.
 
         --session-file <session-file>
-            
+            Path to custom session file [default: ~/.tg_backup/tg_backup.session]
 
 
 SUBCOMMANDS:
@@ -67,6 +74,28 @@ SUBCOMMANDS:
 
     help    
             Prints this message or the help of the given subcommand(s)
+
+```
+
+#### Auth subcommand options:
+
+`tg_backup auth --help`
+
+```
+
+USAGE:
+    tg_backup auth [OPTIONS]
+
+FLAGS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+
+OPTIONS:
+        --session-file-dir <session-file-dir>
+            Use this folder to create a session file [default: ~/.tg_backup]
+
+        --session-file-name <session-file-name>
+            Custom name for session file [default: tg_backup.session]
 ```
 
 ### License
