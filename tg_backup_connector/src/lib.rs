@@ -30,6 +30,7 @@ use std::{env, fs, io};
 use tg_backup_types::Member;
 use tokio::task;
 use tokio::task::JoinHandle;
+use grammers_client::client::messages::MessageIter;
 
 const DEFAULT_FILE_NAME: &'static str = "tg_backup.session";
 
@@ -102,6 +103,28 @@ impl DIter for ProductionDIter {
 }
 
 #[async_trait]
+pub trait DMsgIter: Send {
+    async fn total(&mut self) -> Result<usize, InvocationError>;
+
+    fn iter(self: Box<Self>) -> MessageIter;
+}
+
+pub struct ProductionDMsgIter {
+    iter: MessageIter,
+}
+
+#[async_trait]
+impl DMsgIter for ProductionDMsgIter {
+    async fn total(&mut self) -> Result<usize, InvocationError> {
+        self.iter.total().await
+    }
+
+    fn iter(self: Box<Self>) -> MessageIter {
+        self.iter
+    }
+}
+
+#[async_trait]
 pub trait Tg: Clone + Send {
     async fn create_connection(session_file: &Option<String>) -> Result<Self, AuthorizationError>
     where
@@ -114,6 +137,8 @@ pub trait Tg: Clone + Send {
     async fn get_me(&mut self) -> Result<Member, InvocationError>;
 
     async fn dialogs(&mut self) -> Box<dyn DIter>;
+
+    fn messages(&mut self, chat: &Box<dyn DChat>, offset_date: i32, offset_id: Option<i32>) -> Box<dyn DMsgIter>;
 }
 
 #[derive(Clone)]
@@ -226,6 +251,17 @@ impl Tg for ProductionTg {
         let iter_dialogs = self.handle.iter_dialogs();
         Box::new(ProductionDIter {
             dialogs: iter_dialogs,
+        })
+    }
+
+    fn messages(&mut self, chat: &Box<dyn DChat>, offset_date: i32, offset_id: Option<i32>) -> Box<dyn DMsgIter> {
+        let mut iter = self.handle.iter_messages(&chat.chat())
+            .offset_date(offset_date);
+        if let Some(id) = offset_id {
+            iter = iter.offset_id(id);
+        }
+        Box::new(ProductionDMsgIter {
+            iter
         })
     }
 }

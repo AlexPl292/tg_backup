@@ -42,7 +42,7 @@ use crate::types::Attachment::PhotoExpired;
 use crate::types::{
     chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo,
 };
-use tg_backup_connector::{DDialog, Tg};
+use tg_backup_connector::{DDialog, Tg, DMsgIter};
 use tg_backup_types::Member;
 
 const PATH: &'static str = "backup";
@@ -230,7 +230,7 @@ fn save_current_information(chats: Vec<i32>, excluded: Vec<i32>, batch_size: i32
 }
 
 async fn extract_dialog<T>(
-    tg: T,
+    mut tg: T,
     mut dialog: Box<dyn DDialog>,
     main_ctx: Arc<MainContext>,
     main_mut_ctx: Arc<RwLock<MainMutContext>>,
@@ -332,12 +332,7 @@ where
     }
 
     let mut messages = tg
-        .handle()
-        .iter_messages(&chat.chat())
-        .offset_date(start_loading_time.timestamp() as i32);
-    if let Some(id) = last_loaded_id {
-        messages = messages.offset_id(id);
-    }
+        .messages(&chat, start_loading_time.timestamp() as i32, last_loaded_id);
     let mut last_message: Option<(i32, DateTime<Utc>)> = None;
     let total_messages = messages.total().await.unwrap_or(0);
     let amount_of_messages_to_load = total_messages - amount_of_already_loaded_messages;
@@ -373,8 +368,9 @@ where
 
     let mut pivot_time = chrono::offset::Utc::now();
 
+    let mut buffer = messages.iter();
     loop {
-        let msg = messages.next().await;
+        let msg = buffer.next().await;
         match msg {
             Ok(Some(mut message)) => {
                 if let Some(end_time) = end_loading_time {
