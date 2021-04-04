@@ -42,7 +42,7 @@ use crate::types::Attachment::PhotoExpired;
 use crate::types::{
     chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo,
 };
-use tg_backup_connector::{DDialog, Tg, DMsgIter};
+use tg_backup_connector::{DDialog, Tg, DMsgIter, DMessage};
 use tg_backup_types::Member;
 
 const PATH: &'static str = "backup";
@@ -368,13 +368,14 @@ where
 
     let mut pivot_time = chrono::offset::Utc::now();
 
-    let mut buffer = messages.iter();
     loop {
-        let msg = buffer.next().await;
+        let msg = messages.next().await;
         match msg {
             Ok(Some(mut message)) => {
+                let message_date = message.date();
+                let message_id = message.id();
                 if let Some(end_time) = end_loading_time {
-                    if message.date() < end_time {
+                    if message_date < end_time {
                         chat_ctx.force_drop_messages();
                         in_progress.remove_file();
                         if let Ok(mut ctx) = main_mut_ctx.write() {
@@ -387,7 +388,7 @@ where
                         return Ok(());
                     }
                 }
-                let saving_result = save_message(&mut message, &mut chat_ctx).await;
+                let saving_result = save_message(message, &mut chat_ctx).await;
                 if let Err(_) = saving_result {
                     log::error!("Error while loading");
                     if let Some(pb) = chat_ctx.pb.as_mut() {
@@ -422,7 +423,7 @@ where
                     pivot_time = current_time;
                 }
 
-                last_message = Some((message.id(), message.date()));
+                last_message = Some((message_id, message_date));
                 if let Some(pb) = chat_ctx.pb.as_mut() {
                     pb.set(counter as u64);
                     pb.message(format!("Loading {} [messages] ", visual_id).as_str());
@@ -492,7 +493,8 @@ where
     Ok(())
 }
 
-async fn save_message(message: &mut Message, chat_ctx: &mut ChatContext) -> Result<(), ()> {
+async fn save_message(message_x: Box<dyn DMessage>, chat_ctx: &mut ChatContext) -> Result<(), ()> {
+    let message = message_x.msg();
     let types = &chat_ctx.types;
     let res = if let Some(photo) = message.photo() {
         if let Some(pb) = chat_ctx.pb.as_mut() {
@@ -618,7 +620,7 @@ async fn save_message(message: &mut Message, chat_ctx: &mut ChatContext) -> Resu
         Ok(())
     } else {
         log::debug!("Loading message {}", message.text());
-        chat_ctx.messages_accumulator.push(msg_to_info(message));
+        chat_ctx.messages_accumulator.push(msg_to_info(&message));
         Ok(())
     }
 }

@@ -18,3 +18,4 @@ log = "0.4.8"
 shellexpand = "2.1.0"
 home = "0.5.3"
 tg_backup_types = { path = "../tg_backup_types" }
+chrono = { version = "0.4.19", features = ["serde"] }

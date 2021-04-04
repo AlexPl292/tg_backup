@@ -20,7 +20,7 @@
 
 use async_trait::async_trait;
 use grammers_client::client::dialogs::DialogIter;
-use grammers_client::types::{Chat, Dialog};
+use grammers_client::types::{Chat, Dialog, Message};
 use grammers_client::{Client, ClientHandle, Config, SignInError};
 use grammers_mtsender::{AuthorizationError, InvocationError, ReadError};
 use grammers_session::FileSession;
@@ -31,6 +31,7 @@ use tg_backup_types::Member;
 use tokio::task;
 use tokio::task::JoinHandle;
 use grammers_client::client::messages::MessageIter;
+use chrono::{DateTime, Utc};
 
 const DEFAULT_FILE_NAME: &'static str = "tg_backup.session";
 
@@ -107,6 +108,8 @@ pub trait DMsgIter: Send {
     async fn total(&mut self) -> Result<usize, InvocationError>;
 
     fn iter(self: Box<Self>) -> MessageIter;
+
+    async fn next(&mut self) -> Result<Option<Box<dyn DMessage>>, InvocationError>  ;
 }
 
 pub struct ProductionDMsgIter {
@@ -121,6 +124,37 @@ impl DMsgIter for ProductionDMsgIter {
 
     fn iter(self: Box<Self>) -> MessageIter {
         self.iter
+    }
+
+    async fn next(&mut self) -> Result<Option<Box<dyn DMessage>>, InvocationError>  {
+        self.iter.next().await.map(|x| x.map(|y| Box::new(ProductionDMessage {
+            message: y
+        }) as Box<dyn DMessage>))
+    }
+}
+
+#[async_trait]
+pub trait DMessage: Send {
+    fn msg(self: Box<Self>) -> Message;
+    fn date(&self) -> DateTime<Utc>;
+    fn id(&self) -> i32;
+}
+
+pub struct ProductionDMessage {
+    message: Message,
+}
+
+impl DMessage for ProductionDMessage {
+    fn msg(self: Box<Self>) -> Message {
+        self.message
+    }
+
+    fn date(&self) -> DateTime<Utc> {
+        self.message.date()
+    }
+
+    fn id(&self) -> i32 {
+        self.message.id()
     }
 }
 
