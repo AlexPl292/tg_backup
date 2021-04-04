@@ -59,7 +59,7 @@ pub async fn start_backup(opts: Opts) {
     let session_file = opts.session_file;
 
     // Check if authentication is needed
-    if connector::need_auth(session_file.clone()) {
+    if connector::need_auth(&session_file) {
         println!("Start tg_backup with `auth` command");
         return;
     }
@@ -90,14 +90,14 @@ pub async fn start_backup(opts: Opts) {
     }));
 
     // Save me
-    let (client_handle, main_handle) = get_connection(session_file.clone()).await;
+    let (client_handle, main_handle) = get_connection(&session_file).await;
     save_me(client_handle).await;
     drop(main_handle);
 
     // Start backup loop
     let mut finish_loop = false;
     while !finish_loop {
-        let (client_handle, _main_handle) = get_connection(session_file.clone()).await;
+        let (client_handle, _main_handle) = get_connection(&session_file).await;
 
         let result = start_iteration(
             client_handle,
@@ -120,11 +120,11 @@ pub async fn start_backup(opts: Opts) {
 }
 
 async fn get_connection(
-    session_file: Option<String>,
+    session_file: &Option<String>,
 ) -> (ClientHandle, JoinHandle<Result<(), ReadError>>) {
     let mut counter = 0;
     loop {
-        let connect = connector::create_connection(session_file.clone()).await;
+        let connect = connector::create_connection(session_file).await;
         if let Ok((handle, main_loop)) = connect {
             return (handle, main_loop);
         }

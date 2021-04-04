@@ -29,7 +29,7 @@ use tokio::task::JoinHandle;
 
 const DEFAULT_FILE_NAME: &'static str = "tg_backup.session";
 
-pub fn need_auth(session_file: Option<String>) -> bool {
+pub fn need_auth(session_file: &Option<String>) -> bool {
     let path_result = path_or_default(session_file);
     let path = if let Ok(path) = path_result {
         path
@@ -40,7 +40,7 @@ pub fn need_auth(session_file: Option<String>) -> bool {
 }
 
 pub async fn create_connection(
-    session_file: Option<String>,
+    session_file: &Option<String>,
 ) -> Result<(ClientHandle, JoinHandle<Result<(), ReadError>>), AuthorizationError> {
     let api_id = env!("TG_ID").parse().expect("TG_ID invalid");
     let api_hash = env!("TG_HASH").to_string();
@@ -148,10 +148,10 @@ fn make_path(session_file_path: Option<String>, session_file_name: String) -> Re
     Ok(file_path)
 }
 
-fn path_or_default(session_file: Option<String>) -> Result<PathBuf, ()> {
+fn path_or_default(session_file: &Option<String>) -> Result<PathBuf, ()> {
     if let Some(path) = session_file {
         let mut path_buf = PathBuf::new();
-        path_buf.push(shellexpand::tilde(path.as_str()).into_owned());
+        path_buf.push(shellexpand::tilde(path).into_owned());
         Ok(path_buf)
     } else {
         let default_file_path = default_file_path();
