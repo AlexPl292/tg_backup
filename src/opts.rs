@@ -19,9 +19,19 @@
  */
 
 use clap::Clap;
+use clap::AppSettings;
+use clap::ValueHint;
+
+
+//#[clap(after_help = "Beware `-d`, dragons be here")]
+// We can put something at the end
 
 #[derive(Clap)]
-#[clap(author = "Alex Plate <AlexPl292@gmail.com>", version = "0.1.0")]
+#[clap(author, about, version)]
+#[clap(setting = AppSettings::ColorAuto)]
+#[clap(setting = AppSettings::ColoredHelp)]
+#[clap(setting = AppSettings::HelpRequired)]
+// #[clap(setting = AppSettings::DisableVersionForSubcommands)]
 pub struct Opts {
     /// List of chats that are going to be saved. All chats are saved by default.
     ///
@@ -43,7 +53,8 @@ pub struct Opts {
     #[clap(short, long)]
     pub clean: bool,
 
-    #[clap(long)]
+    /// Path to custom session file [default: ~/.tg_backup/tg_backup.session]
+    #[clap(long, value_hint = ValueHint::FilePath)]
     pub session_file: Option<String>,
 
     #[clap(subcommand)]
@@ -53,15 +64,16 @@ pub struct Opts {
 #[derive(Clap)]
 pub enum SubCommand {
     /// Start authentication process
-    #[clap(version = "0.1.0", author = "Alex Plate <AlexPl292@gmail.com>")]
     Auth(Auth),
 }
 
 #[derive(Clap)]
 pub struct Auth {
-    #[clap(long)]
-    pub session_file_path: Option<String>,
+    /// Use this folder to create a session file [default: ~/.tg_backup]
+    #[clap(long, value_hint = ValueHint::DirPath)]
+    pub session_file_dir: Option<String>,
 
-    #[clap(long)]
-    pub session_file_name: Option<String>,
+    /// Custom name for session file
+    #[clap(long, default_value = "tg_backup.session")]
+    pub session_file_name: String,
 }

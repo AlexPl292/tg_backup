@@ -64,7 +64,7 @@ pub async fn create_connection(
     Ok((client_handle, main_handle))
 }
 
-pub async fn auth(session_file_path: Option<String>, session_file_name: Option<String>) {
+pub async fn auth(session_file_path: Option<String>, session_file_name: String) {
     let api_id = env!("TG_ID").parse().expect("TG_ID invalid");
     let api_hash = env!("TG_HASH").to_string();
 
@@ -128,7 +128,7 @@ pub async fn auth(session_file_path: Option<String>, session_file_name: Option<S
 
 fn make_path(
     session_file_path: Option<String>,
-    session_file_name: Option<String>,
+    session_file_name: String,
 ) -> Result<PathBuf, ()> {
     let mut file_path = if let Some(file_path) = session_file_path {
         let mut buf = PathBuf::new();
@@ -144,11 +144,10 @@ fn make_path(
             }
         }
     };
-    let file_name = session_file_name.unwrap_or(DEFAULT_FILE_NAME.to_string());
 
     let _ = fs::create_dir_all(file_path.as_path());
 
-    file_path.push(file_name);
+    file_path.push(session_file_name);
     Ok(file_path)
 }
 

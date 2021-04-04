@@ -52,7 +52,7 @@ pub async fn start_backup(opts: Opts) {
     // Start auth subcommand
     if let Some(auth) = opts.auth {
         let SubCommand::Auth(auth_data) = auth;
-        connector::auth(auth_data.session_file_path, auth_data.session_file_name).await;
+        connector::auth(auth_data.session_file_dir, auth_data.session_file_name).await;
         return;
     }
 
