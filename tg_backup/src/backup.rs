@@ -260,14 +260,19 @@ where
         }
     }
 
-    let user = if let Chat::User(user) = chat.chat() {
-        user
+    let member = if let Some(member) = chat.user() {
+        member
     } else {
         // Save only one-to-one dialogs at the moment
         return Ok(());
     };
 
-    let visual_id = format!("{}.{}", chat_name, user.username().unwrap_or("NO_USERNAME"));
+    let username = if let Member::User { username, .. } = &member {
+        username
+    } else {
+        panic!()
+    };
+    let visual_id = format!("{}.{}", chat_name, username.as_ref().unwrap_or(&String::from("NO_USERNAME")));
 
     log::info!("Saving chat. name: {} id: {}", chat_name, chat_id);
 
@@ -346,7 +351,7 @@ where
     .unwrap();
 
     // Save members
-    let members = vec![Member::Me, user.into()];
+    let members = vec![Member::Me, member];
     let members_folder = chat_path.join("members");
     let _ = fs::create_dir(&members_folder);
     let members_path = members_folder.join("members.json");

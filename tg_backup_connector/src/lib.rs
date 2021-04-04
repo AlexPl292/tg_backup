@@ -35,8 +35,8 @@ const DEFAULT_FILE_NAME: &'static str = "tg_backup.session";
 
 pub trait DChat: Send {
     fn id(&self) -> i32;
-
     fn chat(&self) -> Chat;
+    fn user(&self) -> Option<Member>;
 }
 
 pub struct ProductionDChat {
@@ -50,6 +50,15 @@ impl DChat for ProductionDChat {
 
     fn chat(&self) -> Chat {
         self.chat.clone()
+    }
+
+    fn user(&self) -> Option<Member> {
+        if let Chat::User(user) = &self.chat {
+            Some(user.into())
+        } else {
+            // Save only one-to-one dialogs at the moment
+            None
+        }
     }
 }
 
