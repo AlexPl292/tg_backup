@@ -18,10 +18,9 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use clap::Clap;
 use clap::AppSettings;
+use clap::Clap;
 use clap::ValueHint;
-
 
 //#[clap(after_help = "Beware `-d`, dragons be here")]
 // We can put something at the end

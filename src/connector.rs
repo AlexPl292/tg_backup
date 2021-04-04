@@ -126,10 +126,7 @@ pub async fn auth(session_file_path: Option<String>, session_file_name: String) 
     }
 }
 
-fn make_path(
-    session_file_path: Option<String>,
-    session_file_name: String,
-) -> Result<PathBuf, ()> {
+fn make_path(session_file_path: Option<String>, session_file_name: String) -> Result<PathBuf, ()> {
     let mut file_path = if let Some(file_path) = session_file_path {
         let mut buf = PathBuf::new();
         buf.push(shellexpand::tilde(file_path.as_str()).into_owned());
