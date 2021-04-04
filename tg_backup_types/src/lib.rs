@@ -21,7 +21,6 @@
 use grammers_client::types::{Chat, Message, User};
 use serde::{Deserialize, Serialize};
 
-
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum Member {

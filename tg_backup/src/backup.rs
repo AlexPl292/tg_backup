@@ -28,12 +28,10 @@ use std::thread::sleep;
 use chrono::{DateTime, Utc};
 use grammers_client::types::photo_sizes::VecExt;
 use grammers_client::types::{Chat, Dialog, Message};
-use grammers_client::ClientHandle;
 use grammers_mtproto::mtp::RpcError;
 use grammers_mtsender::{InvocationError, ReadError};
 use pbr::ProgressBar;
 use tokio::task;
-use tokio::task::JoinHandle;
 use tokio::time::Duration;
 
 use crate::connector;
@@ -44,7 +42,7 @@ use crate::types::Attachment::PhotoExpired;
 use crate::types::{
     chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo,
 };
-use tg_backup_connector::Tg;
+use tg_backup_connector::{DDialog, Tg};
 use tg_backup_types::Member;
 
 const PATH: &'static str = "backup";
@@ -52,7 +50,7 @@ const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 
 pub async fn start_backup<T>(opts: Opts)
 where
-    T: Tg,
+    T: Tg + 'static,
 {
     // Start auth subcommand
     if let Some(auth) = opts.auth {
@@ -97,20 +95,14 @@ where
     // Save me
     let mut tg: T = get_connection::<T>(&session_file).await;
     save_me(&mut tg).await;
-    drop(tg.join_handle());
+    drop(tg);
 
     // Start backup loop
     let mut finish_loop = false;
     while !finish_loop {
-        let tg:T = get_connection::<T>(&session_file).await;
-        let client_handle = tg.handle();
+        let tg: T = get_connection::<T>(&session_file).await;
 
-        let result = start_iteration(
-            client_handle,
-            arc_main_ctx.clone(),
-            main_mut_context.clone(),
-        )
-        .await;
+        let result = start_iteration(tg, arc_main_ctx.clone(), main_mut_context.clone()).await;
 
         finish_loop = match result {
             Ok(_) => {
@@ -149,7 +141,7 @@ where
 
 async fn save_me<T>(tg: &mut T)
 where
-    T: Tg
+    T: Tg,
 {
     let me_result = tg.get_me().await;
     match me_result {
@@ -165,15 +157,18 @@ where
     }
 }
 
-async fn start_iteration(
-    client_handle: ClientHandle,
+async fn start_iteration<T>(
+    mut tg: T,
     main_ctx: Arc<MainContext>,
     main_mut_ctx: Arc<RwLock<MainMutContext>>,
-) -> Result<(), ()> {
-    let mut dialogs = client_handle.iter_dialogs();
+) -> Result<(), ()>
+where
+    T: Tg + 'static,
+{
+    let mut dialogs_iter = tg.dialogs().await;
     if let Ok(mut ctx) = main_mut_ctx.write() {
         if let None = ctx.amount_of_dialogs {
-            let total_dialogs_count = dialogs.total().await;
+            let total_dialogs_count = dialogs_iter.total().await;
             if let Ok(dialogs_count) = total_dialogs_count {
                 ctx.amount_of_dialogs = Some(dialogs_count);
                 log::info!("Saving {} dialogs", dialogs_count);
@@ -182,18 +177,17 @@ async fn start_iteration(
         }
     }
     loop {
-        let dialog_res = dialogs.next().await;
+        let dialog_res = dialogs_iter.next().await;
         match dialog_res {
             Ok(Some(dialog)) => {
-                let client_handle = client_handle.clone();
+                let tg = tg.clone();
 
                 // TODO okay, this should be executed in an async manner, but it doesn't work
                 //   not sure why. So let's leave it sync.
                 let my_main_context = main_ctx.clone();
                 let my_main_mut_context = main_mut_ctx.clone();
                 let result = task::spawn(async move {
-                    extract_dialog(client_handle, dialog, my_main_context, my_main_mut_context)
-                        .await
+                    extract_dialog(tg, dialog, my_main_context, my_main_mut_context).await
                 })
                 .await
                 .unwrap();
@@ -235,47 +229,49 @@ fn save_current_information(chats: Vec<i32>, excluded: Vec<i32>, batch_size: i32
     main_context
 }
 
-async fn extract_dialog(
-    client_handle: ClientHandle,
-    dialog: Dialog,
+async fn extract_dialog<T>(
+    tg: T,
+    mut dialog: Box<dyn DDialog>,
     main_ctx: Arc<MainContext>,
     main_mut_ctx: Arc<RwLock<MainMutContext>>,
-) -> Result<(), ()> {
+) -> Result<(), ()>
+where
+    T: Tg,
+{
     let chat = dialog.chat();
 
+    let chat_id = chat.id();
+    let cha_chat = chat.chat();
+    let chat_name = cha_chat.name();
+
     if let Some(chats) = main_ctx.included_chats.as_ref() {
-        if !chats.contains(&dialog.chat.id()) {
+        if !chats.contains(&chat_id) {
             return Ok(());
         }
     }
 
-    if main_ctx.excluded_chats.contains(&dialog.chat.id()) {
+    if main_ctx.excluded_chats.contains(&chat_id) {
         return Ok(());
     }
 
     if let Ok(ctx) = main_mut_ctx.read() {
-        if ctx.already_finished.contains(&dialog.chat.id()) {
+        if ctx.already_finished.contains(&chat_id) {
             return Ok(());
         }
     }
 
-    let user = if let Chat::User(user) = chat {
+    let user = if let Chat::User(user) = chat.chat() {
         user
     } else {
         // Save only one-to-one dialogs at the moment
         return Ok(());
     };
 
-    let visual_id = format!(
-        "{}.{}",
-        chat.name(),
-        user.username().unwrap_or("NO_USERNAME")
-    );
+    let visual_id = format!("{}.{}", chat_name, user.username().unwrap_or("NO_USERNAME"));
 
-    log::info!("Saving chat. name: {} id: {}", chat.name(), chat.id());
+    log::info!("Saving chat. name: {} id: {}", chat_name, chat_id);
 
-    let id = chat.id();
-    let chat_path_string = format!("{}/chats/{}.{}", PATH, id, visual_id.as_str());
+    let chat_path_string = format!("{}/chats/{}.{}", PATH, chat_id, visual_id.as_str());
     let chat_path = Path::new(chat_path_string.as_str());
     if !chat_path.exists() {
         let _ = fs::create_dir_all(chat_path);
@@ -330,8 +326,9 @@ async fn extract_dialog(
         in_progress.write_data(&info);
     }
 
-    let mut messages = client_handle
-        .iter_messages(chat)
+    let mut messages = tg
+        .handle()
+        .iter_messages(&chat.chat())
         .offset_date(start_loading_time.timestamp() as i32);
     if let Some(id) = last_loaded_id {
         messages = messages.offset_id(id);
@@ -344,7 +341,7 @@ async fn extract_dialog(
     let info_file = File::create(info_file_path).unwrap();
     serde_json::to_writer_pretty(
         &info_file,
-        &chat_to_info(chat, global_loading_from, total_messages),
+        &chat_to_info(&chat.chat(), global_loading_from, total_messages),
     )
     .unwrap();
 
@@ -380,13 +377,11 @@ async fn extract_dialog(
                         chat_ctx.force_drop_messages();
                         in_progress.remove_file();
                         if let Ok(mut ctx) = main_mut_ctx.write() {
-                            ctx.already_finished.push(chat.id());
+                            ctx.already_finished.push(chat_id);
                         }
-                        log::info!("Finish writing data: {}", chat.name());
+                        log::info!("Finish writing data: {}", chat_name);
                         if let Some(pb) = chat_ctx.pb.as_mut() {
-                            pb.finish_println(
-                                format!("Finish loading of {}", chat.name()).as_str(),
-                            );
+                            pb.finish_println(format!("Finish loading of {}", chat_name).as_str());
                         }
                         return Ok(());
                     }
@@ -448,11 +443,11 @@ async fn extract_dialog(
                 chat_ctx.force_drop_messages();
                 in_progress.remove_file();
                 if let Ok(mut ctx) = main_mut_ctx.write() {
-                    ctx.already_finished.push(chat.id());
+                    ctx.already_finished.push(chat_id);
                 }
-                log::info!("Finish writing data: {}", chat.name());
+                log::info!("Finish writing data: {}", chat_name);
                 if let Some(pb) = chat_ctx.pb.as_mut() {
-                    pb.finish_println(format!("Finish loading of {}", chat.name()).as_str());
+                    pb.finish_println(format!("Finish loading of {}", chat_name).as_str());
                 }
                 return Ok(());
             }

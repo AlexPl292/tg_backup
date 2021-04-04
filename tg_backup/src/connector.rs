@@ -18,14 +18,8 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use grammers_client::{Client, ClientHandle, Config, SignInError};
-use grammers_mtsender::{AuthorizationError, ReadError};
-use grammers_session::FileSession;
-use std::io::{BufRead, Write};
 use std::path::PathBuf;
 use std::{env, fs, io};
-use tokio::task;
-use tokio::task::JoinHandle;
 
 const DEFAULT_FILE_NAME: &'static str = "tg_backup.session";
 

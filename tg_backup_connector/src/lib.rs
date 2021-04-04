@@ -19,42 +19,102 @@
  */
 
 use async_trait::async_trait;
+use grammers_client::client::dialogs::DialogIter;
+use grammers_client::types::{Chat, Dialog};
 use grammers_client::{Client, ClientHandle, Config, SignInError};
-use grammers_mtsender::{AuthorizationError, ReadError, InvocationError};
+use grammers_mtsender::{AuthorizationError, InvocationError, ReadError};
 use grammers_session::FileSession;
 use std::io::{BufRead, Write};
 use std::path::PathBuf;
 use std::{env, fs, io};
+use tg_backup_types::Member;
 use tokio::task;
 use tokio::task::JoinHandle;
-use tg_backup_types::Member;
 
 const DEFAULT_FILE_NAME: &'static str = "tg_backup.session";
 
+pub trait DChat: Send {
+    fn id(&self) -> i32;
+
+    fn chat(&self) -> Chat;
+}
+
+pub struct ProductionDChat {
+    chat: Chat,
+}
+
+impl DChat for ProductionDChat {
+    fn id(&self) -> i32 {
+        self.chat.id()
+    }
+
+    fn chat(&self) -> Chat {
+        self.chat.clone()
+    }
+}
+
+pub trait DDialog: Send {
+    fn chat(&mut self) -> Box<dyn DChat>;
+}
+
+pub struct ProductionDDialog {
+    dialog: Dialog,
+}
+
+impl DDialog for ProductionDDialog {
+    fn chat(&mut self) -> Box<dyn DChat> {
+        let chat = self.dialog.chat().clone();
+        Box::new(ProductionDChat { chat })
+    }
+}
+
 #[async_trait]
-pub trait Tg {
-    async fn create_connection(
-        session_file: &Option<String>,
-    ) -> Result<Self, AuthorizationError> where Self: Sized;
+pub trait DIter {
+    async fn total(&mut self) -> Result<usize, InvocationError>;
+    async fn next(&mut self) -> Result<Option<Box<dyn DDialog>>, InvocationError>;
+}
+
+pub struct ProductionDIter {
+    dialogs: DialogIter,
+}
+
+#[async_trait]
+impl DIter for ProductionDIter {
+    async fn total(&mut self) -> Result<usize, InvocationError> {
+        self.dialogs.total().await
+    }
+
+    async fn next(&mut self) -> Result<Option<Box<dyn DDialog>>, InvocationError> {
+        self.dialogs
+            .next()
+            .await
+            .map(|x| x.map(|y| Box::new(ProductionDDialog { dialog: y }) as Box<dyn DDialog>))
+    }
+}
+
+#[async_trait]
+pub trait Tg: Clone + Send {
+    async fn create_connection(session_file: &Option<String>) -> Result<Self, AuthorizationError>
+    where
+        Self: Sized;
 
     async fn auth(session_file_path: Option<String>, session_file_name: String);
 
     fn handle(&self) -> ClientHandle;
-    fn join_handle(self) -> JoinHandle<Result<(), ReadError>>;
 
     async fn get_me(&mut self) -> Result<Member, InvocationError>;
+
+    async fn dialogs(&mut self) -> Box<dyn DIter>;
 }
 
+#[derive(Clone)]
 pub struct ProductionTg {
     handle: ClientHandle,
-    join_handle: JoinHandle<Result<(), ReadError>>,
 }
 
 #[async_trait]
 impl Tg for ProductionTg {
-    async fn create_connection(
-        session_file: &Option<String>,
-    ) -> Result<Self, AuthorizationError> {
+    async fn create_connection(session_file: &Option<String>) -> Result<Self, AuthorizationError> {
         let api_id = env!("TG_ID").parse().expect("TG_ID invalid");
         let api_hash = env!("TG_HASH").to_string();
 
@@ -73,10 +133,9 @@ impl Tg for ProductionTg {
 
         let client_handle = client.handle();
 
-        let main_handle = task::spawn(async move { client.run_until_disconnected().await });
+        task::spawn(async move { client.run_until_disconnected().await });
         Ok(ProductionTg {
             handle: client_handle,
-            join_handle: main_handle,
         })
     }
 
@@ -146,16 +205,19 @@ impl Tg for ProductionTg {
         self.handle.clone()
     }
 
-    fn join_handle(self) -> JoinHandle<Result<(), ReadError>> {
-        self.join_handle
-    }
-
     async fn get_me(&mut self) -> Result<Member, InvocationError> {
         let me_result = self.handle.get_me().await;
         match me_result {
             Ok(me) => Ok(me.into()),
-            Err(err) => Err(err)
+            Err(err) => Err(err),
         }
+    }
+
+    async fn dialogs(&mut self) -> Box<dyn DIter> {
+        let iter_dialogs = self.handle.iter_dialogs();
+        Box::new(ProductionDIter {
+            dialogs: iter_dialogs,
+        })
     }
 }
 
