@@ -911,6 +911,7 @@ dependencies = [
  "shellexpand",
  "simple-logging",
  "tg_backup_connector",
+ "tg_backup_types",
  "tokio",
 ]
 
@@ -928,6 +929,14 @@ dependencies = [
  "log",
  "shellexpand",
  "tokio",
+]
+
+[[package]]
+name = "tg_backup_types"
+version = "0.1.0"
+dependencies = [
+ "grammers-client",
+ "serde",
 ]
 
 [[package]]

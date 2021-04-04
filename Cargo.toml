@@ -3,4 +3,5 @@
 members = [
     "tg_backup",
     "tg_backup_connector",
+    "tg_backup_types",
 ]

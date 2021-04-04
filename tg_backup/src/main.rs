@@ -34,7 +34,6 @@ mod types;
 #[tokio::main]
 async fn main() {
     let opts: Opts = Opts::parse();
-    let tg = ProductionTg {};
 
-    start_backup(opts, tg).await;
+    start_backup::<ProductionTg>(opts).await;
 }

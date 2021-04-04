@@ -42,14 +42,15 @@ use crate::in_progress::{InProgress, InProgressInfo};
 use crate::opts::{Opts, SubCommand};
 use crate::types::Attachment::PhotoExpired;
 use crate::types::{
-    chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo, Member,
+    chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo,
 };
 use tg_backup_connector::Tg;
+use tg_backup_types::Member;
 
 const PATH: &'static str = "backup";
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 
-pub async fn start_backup<T>(opts: Opts, tg: T)
+pub async fn start_backup<T>(opts: Opts)
 where
     T: Tg,
 {

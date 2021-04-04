@@ -23,10 +23,11 @@ use std::io::Read;
 use std::path::Path;
 use tg_backup;
 use tg_backup::{start_backup, Opts};
+use tg_backup_connector::ProductionTg;
 
 #[tokio::test]
 async fn test_loading() {
-    start_backup(Opts {
+    start_backup::<ProductionTg>(Opts {
         included_chats: vec![1707414104, 1720199897],
         excluded_chats: vec![],
         batch_size: 5,
