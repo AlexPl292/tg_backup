@@ -928,6 +928,7 @@ dependencies = [
  "home",
  "log",
  "shellexpand",
+ "tg_backup_types",
  "tokio",
 ]
 

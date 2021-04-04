@@ -39,90 +39,6 @@ pub fn need_auth(session_file: &Option<String>) -> bool {
     !path.exists()
 }
 
-pub async fn auth(session_file_path: Option<String>, session_file_name: String) {
-    let api_id = env!("TG_ID").parse().expect("TG_ID invalid");
-    let api_hash = env!("TG_HASH").to_string();
-
-    let path_result = make_path(session_file_path, session_file_name);
-    let path = if let Ok(path) = path_result {
-        path
-    } else {
-        return;
-    };
-
-    log::info!("Connecting to Telegram...");
-    let mut client = Client::connect(Config {
-        session: FileSession::create(path.as_path()).unwrap(),
-        api_id,
-        api_hash: api_hash.clone(),
-        params: Default::default(),
-    })
-    .await
-    .unwrap();
-    log::info!("Connected!");
-
-    if !client.is_authorized().await.unwrap() {
-        log::info!("Signing in...");
-        let phone = prompt("Enter your phone number (international format): ").unwrap();
-        let token = client
-            .request_login_code(&phone, api_id, &api_hash)
-            .await
-            .unwrap();
-        let code = prompt("Enter the code you received: ").unwrap();
-        let signed_in = client.sign_in(&token, &code).await;
-        match signed_in {
-            Err(SignInError::PasswordRequired(password_token)) => {
-                // Note: this `prompt` method will echo the password in the console.
-                //       Real code might want to use a better way to handle this.
-                let hint = password_token.hint().unwrap();
-                let prompt_message = format!("Enter the password (hint {}): ", &hint);
-                let password = prompt(prompt_message.as_str()).unwrap();
-
-                client
-                    .check_password(password_token, password.trim())
-                    .await
-                    .unwrap();
-            }
-            Ok(_) => (),
-            Err(e) => panic!("{}", e),
-        };
-        log::info!("Signed in!");
-        log::info!("Create session file under {:?}", path.as_path());
-        println!("Create session file under {:?}", path.as_path());
-        match client.session().save() {
-            Ok(_) => {}
-            Err(e) => {
-                log::error!(
-                    "NOTE: failed to save the session, will sign out when done: {}",
-                    e
-                );
-            }
-        }
-    }
-}
-
-fn make_path(session_file_path: Option<String>, session_file_name: String) -> Result<PathBuf, ()> {
-    let mut file_path = if let Some(file_path) = session_file_path {
-        let mut buf = PathBuf::new();
-        buf.push(shellexpand::tilde(file_path.as_str()).into_owned());
-        buf
-    } else {
-        let default_file_path = default_file_path();
-        match default_file_path {
-            Ok(path) => path,
-            Err(error) => {
-                println!("{}", error);
-                return Err(());
-            }
-        }
-    };
-
-    let _ = fs::create_dir_all(file_path.as_path());
-
-    file_path.push(session_file_name);
-    Ok(file_path)
-}
-
 fn path_or_default(session_file: &Option<String>) -> Result<PathBuf, ()> {
     if let Some(path) = session_file {
         let mut path_buf = PathBuf::new();
@@ -168,20 +84,4 @@ fn default_file_path() -> Result<PathBuf, String> {
     };
     home.push(folder);
     return Ok(home);
-}
-
-type MyResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-
-fn prompt(message: &str) -> MyResult<String> {
-    let stdout = io::stdout();
-    let mut stdout = stdout.lock();
-    stdout.write_all(message.as_bytes())?;
-    stdout.flush()?;
-
-    let stdin = io::stdin();
-    let mut stdin = stdin.lock();
-
-    let mut line = String::new();
-    stdin.read_line(&mut line)?;
-    Ok(line)
 }

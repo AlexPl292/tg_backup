@@ -57,7 +57,7 @@ where
     // Start auth subcommand
     if let Some(auth) = opts.auth {
         let SubCommand::Auth(auth_data) = auth;
-        connector::auth(auth_data.session_file_dir, auth_data.session_file_name).await;
+        T::auth(auth_data.session_file_dir, auth_data.session_file_name).await;
         return;
     }
 
@@ -95,14 +95,15 @@ where
     }));
 
     // Save me
-    let (client_handle, main_handle) = get_connection::<T>(&session_file).await;
-    save_me(client_handle).await;
-    drop(main_handle);
+    let mut tg: T = get_connection::<T>(&session_file).await;
+    save_me(&mut tg).await;
+    drop(tg.join_handle());
 
     // Start backup loop
     let mut finish_loop = false;
     while !finish_loop {
-        let (client_handle, _main_handle) = get_connection::<T>(&session_file).await;
+        let tg:T = get_connection::<T>(&session_file).await;
+        let client_handle = tg.handle();
 
         let result = start_iteration(
             client_handle,
@@ -124,17 +125,15 @@ where
     }
 }
 
-async fn get_connection<T>(
-    session_file: &Option<String>,
-) -> (ClientHandle, JoinHandle<Result<(), ReadError>>)
+async fn get_connection<T>(session_file: &Option<String>) -> T
 where
     T: Tg,
 {
     let mut counter = 0;
     loop {
         let connect = T::create_connection(session_file).await;
-        if let Ok((handle, main_loop)) = connect {
-            return (handle, main_loop);
+        if let Ok(tg) = connect {
+            return tg;
         }
         counter += 1;
         let time_sec = if counter < 5 {
@@ -148,15 +147,17 @@ where
     }
 }
 
-async fn save_me(mut client_handle: ClientHandle) {
-    let me_result = client_handle.get_me().await;
+async fn save_me<T>(tg: &mut T)
+where
+    T: Tg
+{
+    let me_result = tg.get_me().await;
     match me_result {
         Ok(me) => {
-            let me_member: Member = me.into();
             let path_string = format!("{}/me.json", PATH);
             let path = Path::new(path_string.as_str());
             let file = File::create(path).unwrap();
-            serde_json::to_writer_pretty(&file, &me_member).unwrap();
+            serde_json::to_writer_pretty(&file, &me).unwrap();
         }
         Err(e) => {
             log::error!("Cannot save information about me: {}", e)
