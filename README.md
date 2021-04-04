@@ -26,7 +26,7 @@ brew install tg_backup
 
 ### Options
 
-Please keep in mind that that list is updated along with main branch.  
+Please keep in mind that this list is updated along with the main branch.  
 Use `--help` flag to get the list of options for your version.
 
 #### Main options
