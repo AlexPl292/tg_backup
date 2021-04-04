@@ -27,6 +27,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-trait"
+version = "0.1.48"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "36ea56748e10732c49404c153638a15ec3d6211ec5ff35d9bb20e13b93576adf"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -899,12 +910,25 @@ dependencies = [
  "serde_json",
  "shellexpand",
  "simple-logging",
+ "tg_backup_connector",
  "tokio",
 ]
 
 [[package]]
 name = "tg_backup_connector"
 version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "grammers-client",
+ "grammers-mtproto",
+ "grammers-mtsender",
+ "grammers-session",
+ "grammers-tl-types",
+ "home",
+ "log",
+ "shellexpand",
+ "tokio",
+]
 
 [[package]]
 name = "thread-id"

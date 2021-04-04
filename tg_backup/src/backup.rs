@@ -44,11 +44,15 @@ use crate::types::Attachment::PhotoExpired;
 use crate::types::{
     chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo, Member,
 };
+use tg_backup_connector::Tg;
 
 const PATH: &'static str = "backup";
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 
-pub async fn start_backup(opts: Opts) {
+pub async fn start_backup<T>(opts: Opts, tg: T)
+where
+    T: Tg,
+{
     // Start auth subcommand
     if let Some(auth) = opts.auth {
         let SubCommand::Auth(auth_data) = auth;
@@ -90,14 +94,14 @@ pub async fn start_backup(opts: Opts) {
     }));
 
     // Save me
-    let (client_handle, main_handle) = get_connection(&session_file).await;
+    let (client_handle, main_handle) = get_connection::<T>(&session_file).await;
     save_me(client_handle).await;
     drop(main_handle);
 
     // Start backup loop
     let mut finish_loop = false;
     while !finish_loop {
-        let (client_handle, _main_handle) = get_connection(&session_file).await;
+        let (client_handle, _main_handle) = get_connection::<T>(&session_file).await;
 
         let result = start_iteration(
             client_handle,
@@ -119,12 +123,15 @@ pub async fn start_backup(opts: Opts) {
     }
 }
 
-async fn get_connection(
+async fn get_connection<T>(
     session_file: &Option<String>,
-) -> (ClientHandle, JoinHandle<Result<(), ReadError>>) {
+) -> (ClientHandle, JoinHandle<Result<(), ReadError>>)
+where
+    T: Tg,
+{
     let mut counter = 0;
     loop {
-        let connect = connector::create_connection(session_file).await;
+        let connect = T::create_connection(session_file).await;
         if let Ok((handle, main_loop)) = connect {
             return (handle, main_loop);
         }

@@ -21,6 +21,7 @@
 use crate::backup::start_backup;
 use crate::opts::Opts;
 use clap::Clap;
+use tg_backup_connector::ProductionTg;
 
 mod attachment_type;
 mod backup;
@@ -33,6 +34,7 @@ mod types;
 #[tokio::main]
 async fn main() {
     let opts: Opts = Opts::parse();
+    let tg = ProductionTg {};
 
-    start_backup(opts).await;
+    start_backup(opts, tg).await;
 }

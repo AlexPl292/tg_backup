@@ -39,31 +39,6 @@ pub fn need_auth(session_file: &Option<String>) -> bool {
     !path.exists()
 }
 
-pub async fn create_connection(
-    session_file: &Option<String>,
-) -> Result<(ClientHandle, JoinHandle<Result<(), ReadError>>), AuthorizationError> {
-    let api_id = env!("TG_ID").parse().expect("TG_ID invalid");
-    let api_hash = env!("TG_HASH").to_string();
-
-    let path_result = path_or_default(session_file);
-    let path = path_result.expect("Session file expected to be existed at this moment");
-
-    log::info!("Connecting to Telegram...");
-    let client = Client::connect(Config {
-        session: FileSession::load(path).unwrap(),
-        api_id,
-        api_hash: api_hash.clone(),
-        params: Default::default(),
-    })
-    .await?;
-    log::info!("Connected!");
-
-    let client_handle = client.handle();
-
-    let main_handle = task::spawn(async move { client.run_until_disconnected().await });
-    Ok((client_handle, main_handle))
-}
-
 pub async fn auth(session_file_path: Option<String>, session_file_name: String) {
     let api_id = env!("TG_ID").parse().expect("TG_ID invalid");
     let api_hash = env!("TG_HASH").to_string();

@@ -5,3 +5,15 @@ authors = ["Alex Plate <AlexPl292@gmail.com>"]
 edition = "2018"
 license = "Apache-3.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "1.1.0", features = ["fs", "sync", "rt-multi-thread", "macros"]}
+grammers-client = { git = "https://github.com/AlexPl292/grammers" }
+grammers-session = { git = "https://github.com/AlexPl292/grammers" }
+grammers-tl-types = { git = "https://github.com/AlexPl292/grammers" }
+grammers-mtsender = { git = "https://github.com/AlexPl292/grammers" }
+grammers-mtproto = { git = "https://github.com/AlexPl292/grammers" }
+async-trait = "0.1.48"
+log = "0.4.8"
+shellexpand = "2.1.0"
+home = "0.5.3"
