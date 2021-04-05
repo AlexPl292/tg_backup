@@ -19,7 +19,7 @@
  */
 
 use std::path::PathBuf;
-use std::{env, fs, io};
+use std::{env, fs};
 
 const DEFAULT_FILE_NAME: &'static str = "tg_backup.session";
 

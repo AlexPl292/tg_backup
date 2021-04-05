@@ -18,10 +18,10 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use grammers_client::types::{Chat, Message};
 use serde::{Deserialize, Serialize};
 
 use chrono::{DateTime, Utc};
+use tg_backup_connector::{DChat, DMessage};
 
 #[derive(Serialize, Deserialize)]
 pub struct ChatInfo {
@@ -62,9 +62,9 @@ pub enum Attachment {
     Error(String),
 }
 
-pub fn msg_to_info(data: &Message) -> MessageInfo {
+pub fn msg_to_info(data: Box<dyn DMessage>) -> MessageInfo {
     MessageInfo {
-        text: data.text().to_string(),
+        text: data.text(),
         id: data.id(),
         date: data.date(),
         attachment: Attachment::None,
@@ -72,14 +72,14 @@ pub fn msg_to_info(data: &Message) -> MessageInfo {
         mentioned: data.mentioned(),
         outgoing: data.outgoing(),
         pinned: data.pinned(),
-        sender_id: data.sender().map(|x| x.id()),
-        sender_name: data.sender().map(|x| x.name().to_string()),
+        sender_id: data.sender_id(),
+        sender_name: data.sender_name(),
     }
 }
 
-pub fn msg_to_file_info(data: &Message, attachment: Attachment) -> MessageInfo {
+pub fn msg_to_file_info(data: Box<dyn DMessage>, attachment: Attachment) -> MessageInfo {
     MessageInfo {
-        text: data.text().to_string(),
+        text: data.text(),
         id: data.id(),
         date: data.date(),
         attachment,
@@ -87,14 +87,18 @@ pub fn msg_to_file_info(data: &Message, attachment: Attachment) -> MessageInfo {
         mentioned: data.mentioned(),
         outgoing: data.outgoing(),
         pinned: data.pinned(),
-        sender_id: data.sender().map(|x| x.id()),
-        sender_name: data.sender().map(|x| x.name().to_string()),
+        sender_id: data.sender_id(),
+        sender_name: data.sender_name(),
     }
 }
 
-pub fn chat_to_info(data: &Chat, loaded_up_to: DateTime<Utc>, total_messages: usize) -> ChatInfo {
+pub fn chat_to_info(
+    data: Box<dyn DChat>,
+    loaded_up_to: DateTime<Utc>,
+    total_messages: usize,
+) -> ChatInfo {
     ChatInfo {
-        name: data.name().to_string(),
+        name: data.name(),
         id: data.id(),
         loaded_up_to,
         total_messages,

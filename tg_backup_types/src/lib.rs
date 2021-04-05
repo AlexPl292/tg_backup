@@ -18,7 +18,7 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use grammers_client::types::{Chat, Message, User};
+use grammers_client::types::User;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]

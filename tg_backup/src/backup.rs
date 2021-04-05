@@ -26,10 +26,8 @@ use std::sync::{Arc, RwLock};
 use std::thread::sleep;
 
 use chrono::{DateTime, Utc};
-use grammers_client::types::photo_sizes::VecExt;
-use grammers_client::types::{Chat, Dialog, Message};
 use grammers_mtproto::mtp::RpcError;
-use grammers_mtsender::{InvocationError, ReadError};
+use grammers_mtsender::InvocationError;
 use pbr::ProgressBar;
 use tokio::task;
 use tokio::time::Duration;
@@ -42,7 +40,7 @@ use crate::types::Attachment::PhotoExpired;
 use crate::types::{
     chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo,
 };
-use tg_backup_connector::{DDialog, Tg, DMsgIter, DMessage};
+use tg_backup_connector::{DDialog, DMessage, Tg};
 use tg_backup_types::Member;
 
 const PATH: &'static str = "backup";
@@ -241,8 +239,7 @@ where
     let chat = dialog.chat();
 
     let chat_id = chat.id();
-    let cha_chat = chat.chat();
-    let chat_name = cha_chat.name();
+    let chat_name = chat.name();
 
     if let Some(chats) = main_ctx.included_chats.as_ref() {
         if !chats.contains(&chat_id) {
@@ -272,7 +269,11 @@ where
     } else {
         panic!()
     };
-    let visual_id = format!("{}.{}", chat_name, username.as_ref().unwrap_or(&String::from("NO_USERNAME")));
+    let visual_id = format!(
+        "{}.{}",
+        chat_name,
+        username.as_ref().unwrap_or(&String::from("NO_USERNAME"))
+    );
 
     log::info!("Saving chat. name: {} id: {}", chat_name, chat_id);
 
@@ -331,8 +332,7 @@ where
         in_progress.write_data(&info);
     }
 
-    let mut messages = tg
-        .messages(&chat, start_loading_time.timestamp() as i32, last_loaded_id);
+    let mut messages = tg.messages(&chat, start_loading_time.timestamp() as i32, last_loaded_id);
     let mut last_message: Option<(i32, DateTime<Utc>)> = None;
     let total_messages = messages.total().await.unwrap_or(0);
     let amount_of_messages_to_load = total_messages - amount_of_already_loaded_messages;
@@ -341,7 +341,7 @@ where
     let info_file = File::create(info_file_path).unwrap();
     serde_json::to_writer_pretty(
         &info_file,
-        &chat_to_info(&chat.chat(), global_loading_from, total_messages),
+        &chat_to_info(chat, global_loading_from, total_messages),
     )
     .unwrap();
 
@@ -371,7 +371,7 @@ where
     loop {
         let msg = messages.next().await;
         match msg {
-            Ok(Some(mut message)) => {
+            Ok(Some(message)) => {
                 let message_date = message.date();
                 let message_id = message.id();
                 if let Some(end_time) = end_loading_time {
@@ -494,20 +494,22 @@ where
 }
 
 async fn save_message(message_x: Box<dyn DMessage>, chat_ctx: &mut ChatContext) -> Result<(), ()> {
-    let message = message_x.msg();
+    let message_text = message_x.text();
     let types = &chat_ctx.types;
-    let res = if let Some(photo) = message.photo() {
+    let option_photo = message_x.photo();
+    let option_document = message_x.document();
+    let res = if let Some(photo) = option_photo {
         if let Some(pb) = chat_ctx.pb.as_mut() {
             pb.message(format!("Loading {} [photo   ] ", chat_ctx.visual_id.as_str()).as_str());
         }
-        log::debug!("Loading photo {}", message.text());
+        log::debug!("Loading photo {}", message_text);
         let current_type = types.get(PHOTO).unwrap();
-        if let Some(id) = photo.id() {
+        let photo_id = photo.id();
+        if let Some(id) = photo_id {
             let file_name = format!("{}@photo.jpg", id);
             let photos_path = current_type.path().join(file_name.as_str());
-            let thumbs = photo.thumbs();
-            let first = thumbs.largest();
-            let downloaded = first.unwrap().download(&photos_path).await;
+            let data_corut = photo.load_largest(&photos_path);
+            let downloaded = data_corut.await;
             let photo_path = format!("../{}/{}", current_type.folder, file_name);
             let attachment = Attachment::Photo(FileInfo {
                 id,
@@ -539,20 +541,22 @@ async fn save_message(message_x: Box<dyn DMessage>, chat_ctx: &mut ChatContext) 
         } else {
             Some(PhotoExpired)
         }
-    } else if let Some(mut doc) = message.document() {
+    } else if let Some(mut doc) = option_document {
+        let doc_id = doc.id();
+        let doc_name = doc.name();
         let (attachment, file_path) = if doc.is_round_message() {
             if let Some(pb) = chat_ctx.pb.as_mut() {
                 pb.message(format!("Loading {} [round   ] ", chat_ctx.visual_id.as_str()).as_str());
             }
-            log::debug!("Round message {}", message.text());
+            log::debug!("Round message {}", message_text);
             let current_type = types.get(ROUND).unwrap();
-            let mut file_name = doc.name().to_string();
-            file_name = format!("{}@{}", doc.id(), file_name);
+            let mut file_name = doc_name;
+            file_name = format!("{}@{}", doc_id, file_name);
             let file_name = current_type.format(file_name);
             let file_path = current_type.path().join(file_name.as_str());
             let att_path = format!("../{}/{}", current_type.folder, file_name);
             let attachment = Attachment::Round(FileInfo {
-                id: doc.id(),
+                id: doc_id,
                 path: att_path,
             });
             (attachment, file_path)
@@ -560,15 +564,15 @@ async fn save_message(message_x: Box<dyn DMessage>, chat_ctx: &mut ChatContext) 
             if let Some(pb) = chat_ctx.pb.as_mut() {
                 pb.message(format!("Loading {} [voice   ] ", chat_ctx.visual_id.as_str()).as_str());
             }
-            log::debug!("Voice message {}", message.text());
+            log::debug!("Voice message {}", message_text);
             let current_type = types.get(VOICE).unwrap();
-            let mut file_name = doc.name().to_string();
-            file_name = format!("{}@{}", doc.id(), file_name);
+            let mut file_name = doc_name;
+            file_name = format!("{}@{}", doc_id, file_name);
             let file_name = current_type.format(file_name);
             let file_path = current_type.path().join(file_name.as_str());
             let att_path = format!("../{}/{}", current_type.folder, file_name);
             let attachment = Attachment::Voice(FileInfo {
-                id: doc.id(),
+                id: doc_id,
                 path: att_path,
             });
             (attachment, file_path)
@@ -576,15 +580,15 @@ async fn save_message(message_x: Box<dyn DMessage>, chat_ctx: &mut ChatContext) 
             if let Some(pb) = chat_ctx.pb.as_mut() {
                 pb.message(format!("Loading {} [file    ] ", chat_ctx.visual_id.as_str()).as_str());
             }
-            log::debug!("File {}", message.text());
+            log::debug!("File {}", message_text);
             let current_type = types.get(FILE).unwrap();
-            let mut file_name = doc.name().to_string();
-            file_name = format!("{}@{}", doc.id(), file_name);
+            let mut file_name = doc_name;
+            file_name = format!("{}@{}", doc_id, file_name);
             let file_name = current_type.format(file_name);
             let file_path = current_type.path().join(file_name.as_str());
             let photo_path = format!("../{}/{}", current_type.folder, file_name);
             let attachment = Attachment::File(FileInfo {
-                id: doc.id(),
+                id: doc_id,
                 path: photo_path,
             });
             (attachment, file_path)
@@ -593,7 +597,7 @@ async fn save_message(message_x: Box<dyn DMessage>, chat_ctx: &mut ChatContext) 
         // TODO handle file migrate
         let downloaded = doc.download(&file_path).await;
         if let Err(e) = downloaded {
-            if chat_ctx.file_issue == doc.id() {
+            if chat_ctx.file_issue == doc_id {
                 chat_ctx.file_issue_count += 1;
                 if chat_ctx.file_issue_count > 5 {
                     Some(Attachment::Error(format!("Cannot load: {}", e)))
@@ -602,7 +606,7 @@ async fn save_message(message_x: Box<dyn DMessage>, chat_ctx: &mut ChatContext) 
                     return Err(());
                 }
             } else {
-                chat_ctx.file_issue = doc.id();
+                chat_ctx.file_issue = doc_id;
                 chat_ctx.file_issue_count = 0;
                 log::error!("Cannot download photo");
                 return Err(());
@@ -615,12 +619,12 @@ async fn save_message(message_x: Box<dyn DMessage>, chat_ctx: &mut ChatContext) 
     };
 
     if let Some(attachment) = res {
-        let message_info = msg_to_file_info(&message, attachment);
+        let message_info = msg_to_file_info(message_x, attachment);
         chat_ctx.messages_accumulator.push(message_info);
         Ok(())
     } else {
-        log::debug!("Loading message {}", message.text());
-        chat_ctx.messages_accumulator.push(msg_to_info(&message));
+        log::debug!("Loading message {}", message_text);
+        chat_ctx.messages_accumulator.push(msg_to_info(message_x));
         Ok(())
     }
 }

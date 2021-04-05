@@ -19,24 +19,26 @@
  */
 
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use grammers_client::client::dialogs::DialogIter;
-use grammers_client::types::{Chat, Dialog, Message};
+use grammers_client::client::messages::MessageIter;
+use grammers_client::types::media::Document;
+use grammers_client::types::photo_sizes::VecExt;
+use grammers_client::types::{Chat, Dialog, Message, Photo};
 use grammers_client::{Client, ClientHandle, Config, SignInError};
-use grammers_mtsender::{AuthorizationError, InvocationError, ReadError};
+use grammers_mtsender::{AuthorizationError, InvocationError};
 use grammers_session::FileSession;
-use std::io::{BufRead, Write};
-use std::path::PathBuf;
+use std::io::{BufRead, Error, Write};
+use std::path::{Path, PathBuf};
 use std::{env, fs, io};
 use tg_backup_types::Member;
 use tokio::task;
-use tokio::task::JoinHandle;
-use grammers_client::client::messages::MessageIter;
-use chrono::{DateTime, Utc};
 
 const DEFAULT_FILE_NAME: &'static str = "tg_backup.session";
 
 pub trait DChat: Send {
     fn id(&self) -> i32;
+    fn name(&self) -> String;
     fn chat(&self) -> Chat;
     fn user(&self) -> Option<Member>;
 }
@@ -48,6 +50,10 @@ pub struct ProductionDChat {
 impl DChat for ProductionDChat {
     fn id(&self) -> i32 {
         self.chat.id()
+    }
+
+    fn name(&self) -> String {
+        self.chat.name().to_string()
     }
 
     fn chat(&self) -> Chat {
@@ -109,7 +115,7 @@ pub trait DMsgIter: Send {
 
     fn iter(self: Box<Self>) -> MessageIter;
 
-    async fn next(&mut self) -> Result<Option<Box<dyn DMessage>>, InvocationError>  ;
+    async fn next(&mut self) -> Result<Option<Box<dyn DMessage>>, InvocationError>;
 }
 
 pub struct ProductionDMsgIter {
@@ -126,18 +132,26 @@ impl DMsgIter for ProductionDMsgIter {
         self.iter
     }
 
-    async fn next(&mut self) -> Result<Option<Box<dyn DMessage>>, InvocationError>  {
-        self.iter.next().await.map(|x| x.map(|y| Box::new(ProductionDMessage {
-            message: y
-        }) as Box<dyn DMessage>))
+    async fn next(&mut self) -> Result<Option<Box<dyn DMessage>>, InvocationError> {
+        self.iter
+            .next()
+            .await
+            .map(|x| x.map(|y| Box::new(ProductionDMessage { message: y }) as Box<dyn DMessage>))
     }
 }
 
-#[async_trait]
 pub trait DMessage: Send {
-    fn msg(self: Box<Self>) -> Message;
     fn date(&self) -> DateTime<Utc>;
     fn id(&self) -> i32;
+    fn text(&self) -> String;
+    fn photo(&self) -> Option<Box<dyn DPhoto>>;
+    fn document(&self) -> Option<Box<dyn DDocument>>;
+    fn edit_date(&self) -> Option<DateTime<Utc>>;
+    fn mentioned(&self) -> bool;
+    fn outgoing(&self) -> bool;
+    fn pinned(&self) -> bool;
+    fn sender_id(&self) -> Option<i32>;
+    fn sender_name(&self) -> Option<String>;
 }
 
 pub struct ProductionDMessage {
@@ -145,16 +159,114 @@ pub struct ProductionDMessage {
 }
 
 impl DMessage for ProductionDMessage {
-    fn msg(self: Box<Self>) -> Message {
-        self.message
-    }
-
     fn date(&self) -> DateTime<Utc> {
         self.message.date()
     }
 
     fn id(&self) -> i32 {
         self.message.id()
+    }
+
+    fn text(&self) -> String {
+        self.message.text().to_string()
+    }
+
+    fn photo(&self) -> Option<Box<dyn DPhoto>> {
+        self.message
+            .photo()
+            .map(|x| Box::new(ProductionDPhoto { photo: x }) as Box<dyn DPhoto>)
+    }
+
+    fn document(&self) -> Option<Box<dyn DDocument>> {
+        self.message
+            .document()
+            .map(|x| Box::new(ProductionDDocument { doc: x }) as Box<dyn DDocument>)
+    }
+
+    fn edit_date(&self) -> Option<DateTime<Utc>> {
+        self.message.edit_date()
+    }
+
+    fn mentioned(&self) -> bool {
+        self.message.mentioned()
+    }
+
+    fn outgoing(&self) -> bool {
+        self.message.outgoing()
+    }
+
+    fn pinned(&self) -> bool {
+        self.message.pinned()
+    }
+
+    fn sender_id(&self) -> Option<i32> {
+        self.message.sender().map(|x| x.id())
+    }
+
+    fn sender_name(&self) -> Option<String> {
+        self.message.sender().map(|x| x.name().to_string())
+    }
+}
+
+#[async_trait]
+pub trait DPhoto: Send {
+    fn id(&self) -> Option<i64>;
+    fn photo(self: Box<Self>) -> Photo;
+    async fn load_largest(&self, path: &PathBuf) -> Result<(), io::Error>;
+}
+
+pub struct ProductionDPhoto {
+    photo: Photo,
+}
+
+#[async_trait]
+impl DPhoto for ProductionDPhoto {
+    fn id(&self) -> Option<i64> {
+        self.photo.id()
+    }
+
+    fn photo(self: Box<Self>) -> Photo {
+        self.photo
+    }
+
+    async fn load_largest(&self, path: &PathBuf) -> Result<(), Error> {
+        self.photo.thumbs().largest().unwrap().download(path).await
+    }
+}
+
+#[async_trait]
+pub trait DDocument: Send {
+    fn id(&self) -> i64;
+    fn name(&self) -> String;
+    fn is_round_message(&self) -> bool;
+    fn is_voice_message(&self) -> bool;
+    async fn download(&mut self, path: &Path) -> Result<(), io::Error>;
+}
+
+pub struct ProductionDDocument {
+    doc: Document,
+}
+
+#[async_trait]
+impl DDocument for ProductionDDocument {
+    fn id(&self) -> i64 {
+        self.doc.id()
+    }
+
+    fn name(&self) -> String {
+        self.doc.name().to_string()
+    }
+
+    fn is_round_message(&self) -> bool {
+        self.doc.is_round_message()
+    }
+
+    fn is_voice_message(&self) -> bool {
+        self.doc.is_voice_message()
+    }
+
+    async fn download(&mut self, path: &Path) -> Result<(), Error> {
+        self.doc.download(path).await
     }
 }
 
@@ -172,7 +284,12 @@ pub trait Tg: Clone + Send {
 
     async fn dialogs(&mut self) -> Box<dyn DIter>;
 
-    fn messages(&mut self, chat: &Box<dyn DChat>, offset_date: i32, offset_id: Option<i32>) -> Box<dyn DMsgIter>;
+    fn messages(
+        &mut self,
+        chat: &Box<dyn DChat>,
+        offset_date: i32,
+        offset_id: Option<i32>,
+    ) -> Box<dyn DMsgIter>;
 }
 
 #[derive(Clone)]
@@ -288,15 +405,20 @@ impl Tg for ProductionTg {
         })
     }
 
-    fn messages(&mut self, chat: &Box<dyn DChat>, offset_date: i32, offset_id: Option<i32>) -> Box<dyn DMsgIter> {
-        let mut iter = self.handle.iter_messages(&chat.chat())
+    fn messages(
+        &mut self,
+        chat: &Box<dyn DChat>,
+        offset_date: i32,
+        offset_id: Option<i32>,
+    ) -> Box<dyn DMsgIter> {
+        let mut iter = self
+            .handle
+            .iter_messages(&chat.chat())
             .offset_date(offset_date);
         if let Some(id) = offset_id {
             iter = iter.offset_id(id);
         }
-        Box::new(ProductionDMsgIter {
-            iter
-        })
+        Box::new(ProductionDMsgIter { iter })
     }
 }
 
