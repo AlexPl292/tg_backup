@@ -18,11 +18,11 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::fs;
+use tempdir::TempDir;
 use tg_backup;
 use tg_backup::{start_backup, Opts};
 use tg_backup_connector::test::TestTg;
-use tempdir::TempDir;
-use std::fs;
 
 #[tokio::test]
 async fn test_loading() {
@@ -44,7 +44,10 @@ async fn test_loading() {
     )
     .await;
 
-    let files: Vec<String> = fs::read_dir(temp_dir.path()).unwrap().map(|x| x.unwrap().file_name().to_str().unwrap().to_string()).collect();
+    let files: Vec<String> = fs::read_dir(temp_dir.path())
+        .unwrap()
+        .map(|x| x.unwrap().file_name().to_str().unwrap().to_string())
+        .collect();
     assert_eq!(vec!["backup.json", "logs", "me.json"], files);
 
     let me_data = fs::read_to_string(temp_dir.path().join("me.json")).unwrap();

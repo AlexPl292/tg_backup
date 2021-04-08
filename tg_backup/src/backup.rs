@@ -227,7 +227,8 @@ fn save_current_information(
     output_dir: PathBuf,
 ) -> MainContext {
     let loading_chats = if chats.is_empty() { None } else { Some(chats) };
-    let mut main_context = MainContext::init(loading_chats, excluded, batch_size, output_dir.clone());
+    let mut main_context =
+        MainContext::init(loading_chats, excluded, batch_size, output_dir.clone());
 
     let path_string = format!("{}/backup.json", output_dir.as_path().display());
     let path = Path::new(path_string.as_str());
@@ -300,7 +301,12 @@ where
 
     log::info!("Saving chat. name: {} id: {}", chat_name, chat_id);
 
-    let chat_path_string = format!("{}/chats/{}.{}", main_ctx.output_dir.as_path().display(), chat_id, visual_id.as_str());
+    let chat_path_string = format!(
+        "{}/chats/{}.{}",
+        main_ctx.output_dir.as_path().display(),
+        chat_id,
+        visual_id.as_str()
+    );
     let chat_path = Path::new(chat_path_string.as_str());
     if !chat_path.exists() {
         let _ = fs::create_dir_all(chat_path);
