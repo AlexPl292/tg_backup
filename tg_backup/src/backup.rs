@@ -26,8 +26,6 @@ use std::sync::{Arc, RwLock};
 use std::thread::sleep;
 
 use chrono::{DateTime, Utc};
-use grammers_mtproto::mtp::RpcError;
-use grammers_mtsender::InvocationError;
 use pbr::ProgressBar;
 use tokio::task;
 use tokio::time::Duration;
@@ -40,7 +38,7 @@ use crate::types::Attachment::PhotoExpired;
 use crate::types::{
     chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo,
 };
-use tg_backup_connector::{DDialog, DMessage, Tg};
+use tg_backup_connector::{DDialog, DMessage, Tg, TgError};
 use tg_backup_types::Member;
 
 const PATH: &'static str = "backup";
@@ -453,18 +451,14 @@ where
                 }
                 return Ok(());
             }
-            Err(InvocationError::Rpc(RpcError {
-                code: _,
-                name,
-                value,
-            })) => {
+            Err(TgError::Rpc { name, value }) => {
                 if name == "FLOOD_WAIT" {
                     log::warn!("Flood wait: {}", value.unwrap());
                     sleep(Duration::from_secs(value.unwrap() as u64))
                 } else if name == "FILE_MIGRATE" {
                     log::warn!("File migrate: {}", value.unwrap());
                 } else {
-                    break;
+                    log::error!("Error {}, {:?}", name, value)
                 }
             }
             Err(e) => {

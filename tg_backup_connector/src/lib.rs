@@ -18,6 +18,8 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+mod errors;
+
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use grammers_client::client::dialogs::DialogIter;
@@ -33,6 +35,8 @@ use std::path::{Path, PathBuf};
 use std::{env, fs, io};
 use tg_backup_types::Member;
 use tokio::task;
+
+pub use crate::errors::TgError;
 
 const DEFAULT_FILE_NAME: &'static str = "tg_backup.session";
 
@@ -115,7 +119,7 @@ pub trait DMsgIter: Send {
 
     fn iter(self: Box<Self>) -> MessageIter;
 
-    async fn next(&mut self) -> Result<Option<Box<dyn DMessage>>, InvocationError>;
+    async fn next(&mut self) -> Result<Option<Box<dyn DMessage>>, TgError>;
 }
 
 pub struct ProductionDMsgIter {
@@ -132,11 +136,12 @@ impl DMsgIter for ProductionDMsgIter {
         self.iter
     }
 
-    async fn next(&mut self) -> Result<Option<Box<dyn DMessage>>, InvocationError> {
+    async fn next(&mut self) -> Result<Option<Box<dyn DMessage>>, TgError> {
         self.iter
             .next()
             .await
             .map(|x| x.map(|y| Box::new(ProductionDMessage { message: y }) as Box<dyn DMessage>))
+            .map_err(|err| err.into())
     }
 }
 
