@@ -74,7 +74,7 @@ where
     let _ = fs::create_dir(output_dir.as_path());
 
     // Initialize logs
-    let log_dir = format!("{:?}/logs", output_dir.as_path());
+    let log_dir = format!("{}/logs", output_dir.as_path().display().to_string());
     let _ = fs::create_dir(log_dir.as_str());
     let log_path = format!("{}/tg_backup.log", log_dir);
     simple_logging::log_to_file(log_path, log::LevelFilter::Info).unwrap();
@@ -162,7 +162,7 @@ where
     let me_result = tg.get_me().await;
     match me_result {
         Ok(me) => {
-            let path_string = format!("{:?}/me.json", main_context.output_dir);
+            let path_string = format!("{}/me.json", main_context.output_dir.display().to_string());
             let path = Path::new(path_string.as_str());
             let file = File::create(path).unwrap();
             serde_json::to_writer_pretty(&file, &me).unwrap();
@@ -227,9 +227,9 @@ fn save_current_information(
     output_dir: PathBuf,
 ) -> MainContext {
     let loading_chats = if chats.is_empty() { None } else { Some(chats) };
-    let mut main_context = MainContext::init(loading_chats, excluded, batch_size, output_dir);
+    let mut main_context = MainContext::init(loading_chats, excluded, batch_size, output_dir.clone());
 
-    let path_string = format!("{}/backup.json", PATH);
+    let path_string = format!("{}/backup.json", output_dir.as_path().display());
     let path = Path::new(path_string.as_str());
     if path.exists() {
         let file = BufReader::new(File::open(path).unwrap());
@@ -300,7 +300,7 @@ where
 
     log::info!("Saving chat. name: {} id: {}", chat_name, chat_id);
 
-    let chat_path_string = format!("{}/chats/{}.{}", PATH, chat_id, visual_id.as_str());
+    let chat_path_string = format!("{}/chats/{}.{}", main_ctx.output_dir.as_path().display(), chat_id, visual_id.as_str());
     let chat_path = Path::new(chat_path_string.as_str());
     if !chat_path.exists() {
         let _ = fs::create_dir_all(chat_path);

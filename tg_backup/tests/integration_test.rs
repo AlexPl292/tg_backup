@@ -21,10 +21,14 @@
 use tg_backup;
 use tg_backup::{start_backup, Opts};
 use tg_backup_connector::test::TestTg;
+use tempdir::TempDir;
+use std::fs;
 
 #[tokio::test]
 async fn test_loading() {
     let data = TestTg { dialogs: vec![] };
+    let temp_dir = TempDir::new("backup").unwrap();
+    let backup_path = temp_dir.path().display().to_string();
 
     start_backup::<TestTg>(
         Some(data),
@@ -35,8 +39,25 @@ async fn test_loading() {
             clean: true,
             session_file: None,
             auth: None,
-            output: None,
+            output: Some(backup_path),
         },
     )
-    .await
+    .await;
+
+    let files: Vec<String> = fs::read_dir(temp_dir.path()).unwrap().map(|x| x.unwrap().file_name().to_str().unwrap().to_string()).collect();
+    assert_eq!(vec!["backup.json", "logs", "me.json"], files);
+
+    let me_data = fs::read_to_string(temp_dir.path().join("me.json")).unwrap();
+    let me_expected = r#"{
+  "type": "User",
+  "id": 0,
+  "username": "Usernae",
+  "first_name": "anem",
+  "last_name": "xx",
+  "verified": false,
+  "contact": false,
+  "mutual_contact": false,
+  "deleted": false
+}"#;
+    assert_eq!(me_expected, me_data)
 }
