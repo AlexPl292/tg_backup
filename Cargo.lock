@@ -898,11 +898,6 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "clap",
- "grammers-client",
- "grammers-mtproto",
- "grammers-mtsender",
- "grammers-session",
- "grammers-tl-types",
  "home",
  "log",
  "pbr",
