@@ -64,6 +64,9 @@ OPTIONS:
             If both included-chats and excluded_chats have the same value, the chat will be
             excluded.
 
+    -o, --output <output>
+            Backup output directory
+
         --session-file <session-file>
             Path to custom session file [default: ~/.tg_backup/tg_backup.session]
 

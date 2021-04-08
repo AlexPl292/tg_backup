@@ -35,6 +35,7 @@ async fn test_loading() {
             clean: true,
             session_file: None,
             auth: None,
+            output: None,
         },
     )
     .await

@@ -21,7 +21,7 @@
 use std::fs;
 use std::fs::File;
 use std::io::BufReader;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use std::thread::sleep;
 
@@ -66,14 +66,15 @@ where
         return;
     }
 
+    let output_dir = path_or_default(&opts.output);
     // Create backup directory
     if opts.clean {
-        let _ = fs::remove_dir_all(PATH);
+        let _ = fs::remove_dir_all(output_dir.as_path());
     }
-    let _ = fs::create_dir(PATH);
+    let _ = fs::create_dir(output_dir.as_path());
 
     // Initialize logs
-    let log_dir = format!("{}/logs", PATH);
+    let log_dir = format!("{:?}/logs", output_dir.as_path());
     let _ = fs::create_dir(log_dir.as_str());
     let log_path = format!("{}/tg_backup.log", log_dir);
     simple_logging::log_to_file(log_path, log::LevelFilter::Info).unwrap();
@@ -82,9 +83,12 @@ where
     log::info!("Version v{}", VERSION.unwrap_or("Unknown"));
 
     // Initialize main context
-    let main_ctx =
-        save_current_information(opts.included_chats, opts.excluded_chats, opts.batch_size);
-    let arc_main_ctx = Arc::new(main_ctx);
+    let main_ctx = save_current_information(
+        opts.included_chats,
+        opts.excluded_chats,
+        opts.batch_size,
+        output_dir,
+    );
 
     let main_mut_context = Arc::new(RwLock::new(MainMutContext {
         already_finished: vec![],
@@ -93,11 +97,12 @@ where
 
     // Save me
     let mut tg: T = get_connection::<T>(test_data.clone(), &session_file).await;
-    save_me(&mut tg).await;
+    save_me(&mut tg, &main_ctx).await;
     drop(tg);
 
     // Start backup loop
     let mut finish_loop = false;
+    let arc_main_ctx = Arc::new(main_ctx);
     while !finish_loop {
         let tg: T = get_connection::<T>(test_data.clone(), &session_file).await;
 
@@ -113,6 +118,18 @@ where
                 false
             }
         }
+    }
+}
+
+fn path_or_default(folder: &Option<String>) -> PathBuf {
+    if let Some(path) = folder {
+        let mut path_buf = PathBuf::new();
+        path_buf.push(shellexpand::tilde(path).into_owned());
+        path_buf
+    } else {
+        let mut dif_path = PathBuf::new();
+        dif_path.push(PATH);
+        dif_path
     }
 }
 
@@ -138,14 +155,14 @@ where
     }
 }
 
-async fn save_me<T>(tg: &mut T)
+async fn save_me<T>(tg: &mut T, main_context: &MainContext)
 where
     T: Tg,
 {
     let me_result = tg.get_me().await;
     match me_result {
         Ok(me) => {
-            let path_string = format!("{}/me.json", PATH);
+            let path_string = format!("{:?}/me.json", main_context.output_dir);
             let path = Path::new(path_string.as_str());
             let file = File::create(path).unwrap();
             serde_json::to_writer_pretty(&file, &me).unwrap();
@@ -203,9 +220,14 @@ where
     }
 }
 
-fn save_current_information(chats: Vec<i32>, excluded: Vec<i32>, batch_size: i32) -> MainContext {
+fn save_current_information(
+    chats: Vec<i32>,
+    excluded: Vec<i32>,
+    batch_size: i32,
+    output_dir: PathBuf,
+) -> MainContext {
     let loading_chats = if chats.is_empty() { None } else { Some(chats) };
-    let mut main_context = MainContext::init(loading_chats, excluded, batch_size);
+    let mut main_context = MainContext::init(loading_chats, excluded, batch_size, output_dir);
 
     let path_string = format!("{}/backup.json", PATH);
     let path = Path::new(path_string.as_str());

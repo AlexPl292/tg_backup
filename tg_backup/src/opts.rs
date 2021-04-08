@@ -32,6 +32,10 @@ use clap::ValueHint;
 #[clap(setting = AppSettings::HelpRequired)]
 // #[clap(setting = AppSettings::DisableVersionForSubcommands)]
 pub struct Opts {
+    /// Backup output directory
+    #[clap(long, short, value_hint = ValueHint::DirPath)]
+    pub output: Option<String>,
+
     /// List of chats that are going to be saved. All chats are saved by default.
     ///
     /// If both included-chats and excluded_chats have the same value, the chat will be excluded.

@@ -20,7 +20,7 @@
 
 use std::collections::HashMap;
 use std::fs::File;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::attachment_type::AttachmentType;
 use crate::types::MessageInfo;
@@ -45,6 +45,7 @@ pub struct MainContext {
     pub(crate) batch_size: i32,
     pub(crate) included_chats: Option<Vec<i32>>,
     pub(crate) excluded_chats: Vec<i32>,
+    pub(crate) output_dir: PathBuf,
 }
 
 impl MainContext {
@@ -52,6 +53,7 @@ impl MainContext {
         loading_chats: Option<Vec<i32>>,
         excluded_chats: Vec<i32>,
         batch_size: i32,
+        output_dir: PathBuf,
     ) -> MainContext {
         MainContext {
             date: chrono::offset::Utc::now(),
@@ -59,6 +61,7 @@ impl MainContext {
             batch_size,
             included_chats: loading_chats,
             excluded_chats,
+            output_dir,
         }
     }
 }
