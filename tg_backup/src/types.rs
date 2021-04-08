@@ -18,10 +18,10 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use chrono::{DateTime, Utc};
-use tg_backup_connector::{DChat, DMessage};
+use tg_backup_connector::traits::{DChat, DMessage};
 
 #[derive(Serialize, Deserialize)]
 pub struct ChatInfo {

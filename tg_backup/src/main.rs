@@ -21,7 +21,7 @@
 use crate::backup::start_backup;
 use crate::opts::Opts;
 use clap::Clap;
-use tg_backup_connector::ProductionTg;
+use tg_backup_connector::production::ProductionTg;
 
 mod attachment_type;
 mod backup;

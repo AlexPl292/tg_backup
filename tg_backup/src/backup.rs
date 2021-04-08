@@ -30,6 +30,9 @@ use pbr::ProgressBar;
 use tokio::task;
 use tokio::time::Duration;
 
+use tg_backup_connector::TgError;
+use tg_backup_types::Member;
+
 use crate::connector;
 use crate::context::{ChatContext, MainContext, MainMutContext, FILE, PHOTO, ROUND, VOICE};
 use crate::in_progress::{InProgress, InProgressInfo};
@@ -38,8 +41,7 @@ use crate::types::Attachment::PhotoExpired;
 use crate::types::{
     chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo,
 };
-use tg_backup_connector::{DDialog, DMessage, Tg, TgError};
-use tg_backup_types::Member;
+use tg_backup_connector::traits::{DDialog, DMessage, Tg};
 
 const PATH: &'static str = "backup";
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
