@@ -26,10 +26,10 @@ use chrono::{DateTime, Utc};
 use grammers_client::client::auth::{AuthorizationError, InvocationError};
 use grammers_client::client::messages::MessageIter;
 use grammers_client::types::{Chat, Photo};
-use grammers_client::ClientHandle;
 
 use tg_backup_types::Member;
 
+use crate::test::TestTg;
 use crate::TgError;
 
 pub trait DChat: Send {
@@ -90,13 +90,14 @@ pub trait DDocument: Send {
 
 #[async_trait]
 pub trait Tg: Clone + Send {
-    async fn create_connection(session_file: &Option<String>) -> Result<Self, AuthorizationError>
+    async fn create_connection(
+        test_data: Option<TestTg>,
+        session_file: &Option<String>,
+    ) -> Result<Self, AuthorizationError>
     where
         Self: Sized;
 
     async fn auth(session_file_path: Option<String>, session_file_name: String);
-
-    fn handle(&self) -> ClientHandle;
 
     async fn get_me(&mut self) -> Result<Member, InvocationError>;
 

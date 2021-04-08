@@ -18,6 +18,7 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::test::TestTg;
 use crate::traits::{DChat, DDialog, DDocument, DIter, DMessage, DMsgIter, DPhoto, Tg};
 use crate::TgError;
 use async_trait::async_trait;
@@ -232,7 +233,10 @@ pub struct ProductionTg {
 
 #[async_trait]
 impl Tg for ProductionTg {
-    async fn create_connection(session_file: &Option<String>) -> Result<Self, AuthorizationError> {
+    async fn create_connection(
+        _test_data: Option<TestTg>,
+        session_file: &Option<String>,
+    ) -> Result<Self, AuthorizationError> {
         let api_id = env!("TG_ID").parse().expect("TG_ID invalid");
         let api_hash = env!("TG_HASH").to_string();
 
@@ -317,10 +321,6 @@ impl Tg for ProductionTg {
                 }
             }
         }
-    }
-
-    fn handle(&self) -> ClientHandle {
-        self.handle.clone()
     }
 
     async fn get_me(&mut self) -> Result<Member, InvocationError> {

@@ -22,4 +22,5 @@ pub use crate::errors::TgError;
 
 mod errors;
 pub mod production;
+pub mod test;
 pub mod traits;
