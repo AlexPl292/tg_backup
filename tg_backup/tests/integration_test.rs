@@ -44,10 +44,11 @@ async fn test_loading() {
     )
     .await;
 
-    let files: Vec<String> = fs::read_dir(temp_dir.path())
+    let mut files: Vec<String> = fs::read_dir(temp_dir.path())
         .unwrap()
         .map(|x| x.unwrap().file_name().to_str().unwrap().to_string())
         .collect();
+    files.sort();
     assert_eq!(vec!["backup.json", "logs", "me.json"], files);
 
     let me_data = fs::read_to_string(temp_dir.path().join("me.json")).unwrap();
