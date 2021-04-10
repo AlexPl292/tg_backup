@@ -99,6 +99,8 @@ pub trait Tg: Clone + Send {
 
     async fn auth(session_file_path: Option<String>, session_file_name: String);
 
+    fn need_auth(session_file: &Option<String>) -> bool;
+
     async fn get_me(&mut self) -> Result<Member, InvocationError>;
 
     async fn dialogs(&mut self) -> Box<dyn DIter>;

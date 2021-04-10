@@ -33,7 +33,6 @@ use tokio::time::Duration;
 use tg_backup_connector::TgError;
 use tg_backup_types::Member;
 
-use crate::connector;
 use crate::context::{ChatContext, MainContext, MainMutContext, FILE, PHOTO, ROUND, VOICE};
 use crate::in_progress::{InProgress, InProgressInfo};
 use crate::opts::{Opts, SubCommand};
@@ -61,7 +60,7 @@ where
     let session_file = opts.session_file;
 
     // Check if authentication is needed
-    if connector::need_auth(&session_file) {
+    if T::need_auth(&session_file) {
         println!("Start tg_backup with `auth` command");
         return;
     }

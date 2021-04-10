@@ -18,16 +18,18 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::test::TestTg;
-use crate::traits::{DChat, DDialog, DDocument, DIter, DMessage, DMsgIter, DPhoto, Tg};
-use crate::TgError;
-use async_trait::async_trait;
-use chrono::{DateTime, Utc};
 use core::default::Default;
 use core::option::Option;
 use core::option::Option::{None, Some};
 use core::result::Result;
 use core::result::Result::{Err, Ok};
+use std::{env, fs};
+use std::io;
+use std::io::{BufRead, Write};
+use std::path::{Path, PathBuf};
+
+use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use grammers_client::client::auth::SignInError;
 use grammers_client::client::client::{Client, ClientHandle, Config};
 use grammers_client::client::dialogs::DialogIter;
@@ -39,11 +41,12 @@ use grammers_client::types::message::Message;
 use grammers_client::types::photo_sizes::VecExt;
 use grammers_mtsender::{AuthorizationError, InvocationError};
 use grammers_session::FileSession;
-use std::io;
-use std::io::{BufRead, Write};
-use std::path::{Path, PathBuf};
-use std::{env, fs};
+
 use tg_backup_types::Member;
+
+use crate::test::TestTg;
+use crate::TgError;
+use crate::traits::{DChat, DDialog, DDocument, DIter, DMessage, DMsgIter, DPhoto, Tg};
 
 const DEFAULT_FILE_NAME: &'static str = "tg_backup.session";
 
@@ -321,6 +324,16 @@ impl Tg for ProductionTg {
                 }
             }
         }
+    }
+
+    fn need_auth(session_file: &Option<String>) -> bool {
+        let path_result = path_or_default(session_file);
+        let path = if let Ok(path) = path_result {
+            path
+        } else {
+            return true;
+        };
+        !path.exists()
     }
 
     async fn get_me(&mut self) -> Result<Member, InvocationError> {

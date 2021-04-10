@@ -25,7 +25,6 @@ use tg_backup_connector::production::ProductionTg;
 
 mod attachment_type;
 mod backup;
-mod connector;
 mod context;
 mod in_progress;
 mod opts;

@@ -42,6 +42,10 @@ impl Tg for TestTg {
 
     async fn auth(_session_file_path: Option<String>, _session_file_name: String) {}
 
+    fn need_auth(_session_file: &Option<String>) -> bool {
+        false
+    }
+
     async fn get_me(&mut self) -> Result<Member, InvocationError> {
         Ok(Member::User {
             id: 0,
