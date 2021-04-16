@@ -19,10 +19,12 @@
  */
 
 use std::fs;
+
 use tempdir::TempDir;
+
 use tg_backup;
 use tg_backup::{start_backup, Opts};
-use tg_backup_connector::test::TestTg;
+use tg_backup_connector::test::{TestDDialog, TestTg};
 
 #[tokio::test]
 async fn test_loading() {
@@ -33,7 +35,7 @@ async fn test_loading() {
     start_backup::<TestTg>(
         Some(data),
         Opts {
-            included_chats: vec![1707414104, 1720199897],
+            included_chats: vec![],
             excluded_chats: vec![],
             batch_size: 5,
             clean: true,
@@ -65,4 +67,44 @@ async fn test_loading() {
   "deleted": false
 }"#;
     assert_eq!(me_expected, me_data)
+}
+
+#[tokio::test]
+async fn test_loading_with_dialogs() {
+    let data = TestTg {
+        dialogs: vec![TestDDialog { messages: vec![] }],
+    };
+    let temp_dir = TempDir::new("backup").unwrap();
+    let backup_path = temp_dir.path().display().to_string();
+
+    start_backup::<TestTg>(
+        Some(data),
+        Opts {
+            included_chats: vec![],
+            excluded_chats: vec![],
+            batch_size: 5,
+            clean: true,
+            session_file: None,
+            quiet: true,
+            auth: None,
+            output: Some(backup_path),
+        },
+    )
+    .await;
+
+    let mut files: Vec<String> = fs::read_dir(temp_dir.path())
+        .unwrap()
+        .map(|x| x.unwrap().file_name().to_str().unwrap().to_string())
+        .collect();
+    files.sort();
+    assert_eq!(vec!["backup.json", "chats", "logs", "me.json"], files);
+
+    let chats_dir = temp_dir.path().join("chats");
+
+    let mut files: Vec<String> = fs::read_dir(chats_dir)
+        .unwrap()
+        .map(|x| x.unwrap().file_name().to_str().unwrap().to_string())
+        .collect();
+    files.sort();
+    assert_eq!(vec!["0.my_chat.Username"], files);
 }

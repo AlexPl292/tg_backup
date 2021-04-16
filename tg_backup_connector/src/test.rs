@@ -18,10 +18,14 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::traits::{DChat, DDialog, DIter, DMsgIter, Tg};
+use crate::traits::{DChat, DDialog, DIter, DMsgIter, Tg, DMessage, DDocument, DPhoto};
 use async_trait::async_trait;
 use grammers_client::client::auth::{AuthorizationError, InvocationError};
 use tg_backup_types::Member;
+use crate::TgError;
+use chrono::{Utc, DateTime};
+use grammers_client::types::Chat;
+use std::any::Any;
 
 #[derive(Clone)]
 pub struct TestTg {
@@ -68,11 +72,16 @@ impl Tg for TestTg {
 
     fn messages(
         &mut self,
-        _chat: &Box<dyn DChat>,
+        chat: &Box<dyn DChat>,
         _offset_date: i32,
         _offset_id: Option<i32>,
     ) -> Box<dyn DMsgIter> {
-        todo!()
+        let test_chat = chat.as_any().downcast_ref::<TestDChat>().unwrap();
+        let msgs = test_chat.messages.clone();
+        Box::new(TestDMsgIter {
+            messages: msgs,
+            counter: 0
+        })
     }
 }
 
@@ -99,10 +108,119 @@ impl DIter for TestDIter {
 }
 
 #[derive(Clone)]
-pub struct TestDDialog {}
+pub struct TestDMsgIter {
+    pub messages: Vec<TestDMessage>,
+    counter: usize,
+}
+
+#[async_trait]
+impl DMsgIter for TestDMsgIter {
+    async fn total(&mut self) -> Result<usize, InvocationError> {
+        Ok(self.messages.len())
+    }
+
+    async fn next(&mut self) -> Result<Option<Box<dyn DMessage>>, TgError> {
+        let message = self.messages.get(self.counter).map(|x| Box::new(x.clone()) as Box<dyn DMessage>);
+        self.counter += 1;
+        Ok(message)
+    }
+}
+
+#[derive(Clone)]
+pub struct TestDMessage {
+}
+
+impl DMessage for TestDMessage {
+    fn date(&self) -> DateTime<Utc> {
+        todo!()
+    }
+
+    fn id(&self) -> i32 {
+        todo!()
+    }
+
+    fn text(&self) -> String {
+        todo!()
+    }
+
+    fn photo(&self) -> Option<Box<dyn DPhoto>> {
+        todo!()
+    }
+
+    fn document(&self) -> Option<Box<dyn DDocument>> {
+        todo!()
+    }
+
+    fn edit_date(&self) -> Option<DateTime<Utc>> {
+        todo!()
+    }
+
+    fn mentioned(&self) -> bool {
+        todo!()
+    }
+
+    fn outgoing(&self) -> bool {
+        todo!()
+    }
+
+    fn pinned(&self) -> bool {
+        todo!()
+    }
+
+    fn sender_id(&self) -> Option<i32> {
+        todo!()
+    }
+
+    fn sender_name(&self) -> Option<String> {
+        todo!()
+    }
+}
+
+#[derive(Clone)]
+pub struct TestDDialog {
+    pub messages: Vec<TestDMessage>,
+}
 
 impl DDialog for TestDDialog {
     fn chat(&mut self) -> Box<dyn DChat> {
+        Box::new(TestDChat {
+            messages: self.messages.clone(),
+        })
+    }
+}
+
+#[derive(Clone)]
+pub struct TestDChat {
+    messages: Vec<TestDMessage>,
+}
+
+impl DChat for TestDChat {
+    fn id(&self) -> i32 {
+        0
+    }
+
+    fn name(&self) -> String {
+        String::from("my_chat")
+    }
+
+    fn chat(&self) -> Chat {
         todo!()
+    }
+
+    fn user(&self) -> Option<Member> {
+        Some(Member::User {
+            id: 0,
+            username: Some(String::from("Username")),
+            first_name: "".to_string(),
+            last_name: None,
+            verified: false,
+            contact: false,
+            mutual_contact: false,
+            deleted: false
+        })
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }

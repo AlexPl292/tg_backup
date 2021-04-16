@@ -24,19 +24,20 @@ use std::path::{Path, PathBuf};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use grammers_client::client::auth::{AuthorizationError, InvocationError};
-use grammers_client::client::messages::MessageIter;
 use grammers_client::types::{Chat, Photo};
 
 use tg_backup_types::Member;
 
 use crate::test::TestTg;
 use crate::TgError;
+use std::any::Any;
 
 pub trait DChat: Send {
     fn id(&self) -> i32;
     fn name(&self) -> String;
     fn chat(&self) -> Chat;
     fn user(&self) -> Option<Member>;
+    fn as_any(&self) -> &dyn Any;
 }
 
 pub trait DDialog: Send {
@@ -52,8 +53,6 @@ pub trait DIter {
 #[async_trait]
 pub trait DMsgIter: Send {
     async fn total(&mut self) -> Result<usize, InvocationError>;
-
-    fn iter(self: Box<Self>) -> MessageIter;
 
     async fn next(&mut self) -> Result<Option<Box<dyn DMessage>>, TgError>;
 }

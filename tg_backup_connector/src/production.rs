@@ -47,6 +47,7 @@ use tg_backup_types::Member;
 use crate::test::TestTg;
 use crate::traits::{DChat, DDialog, DDocument, DIter, DMessage, DMsgIter, DPhoto, Tg};
 use crate::TgError;
+use std::any::Any;
 
 const DEFAULT_FILE_NAME: &'static str = "tg_backup.session";
 
@@ -74,6 +75,10 @@ impl DChat for ProductionDChat {
             // Save only one-to-one dialogs at the moment
             None
         }
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 
@@ -114,10 +119,6 @@ pub struct ProductionDMsgIter {
 impl DMsgIter for ProductionDMsgIter {
     async fn total(&mut self) -> Result<usize, InvocationError> {
         self.iter.total().await
-    }
-
-    fn iter(self: Box<Self>) -> MessageIter {
-        self.iter
     }
 
     async fn next(&mut self) -> Result<Option<Box<dyn DMessage>>, TgError> {
