@@ -23,10 +23,10 @@ use core::option::Option;
 use core::option::Option::{None, Some};
 use core::result::Result;
 use core::result::Result::{Err, Ok};
-use std::{env, fs};
 use std::io;
 use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
+use std::{env, fs};
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -45,8 +45,8 @@ use grammers_session::FileSession;
 use tg_backup_types::Member;
 
 use crate::test::TestTg;
-use crate::TgError;
 use crate::traits::{DChat, DDialog, DDocument, DIter, DMessage, DMsgIter, DPhoto, Tg};
+use crate::TgError;
 
 const DEFAULT_FILE_NAME: &'static str = "tg_backup.session";
 
@@ -378,7 +378,7 @@ fn path_or_default(session_file: &Option<String>) -> Result<PathBuf, ()> {
         let mut file_path = match default_file_path {
             Ok(path) => path,
             Err(error) => {
-                println!("{}", error);
+                log::error!("{}", error);
                 return Err(());
             }
         };
@@ -425,7 +425,7 @@ fn make_path(session_file_path: Option<String>, session_file_name: String) -> Re
         match default_file_path {
             Ok(path) => path,
             Err(error) => {
-                println!("{}", error);
+                log::error!("{}", error);
                 return Err(());
             }
         }

@@ -60,6 +60,10 @@ pub struct Opts {
     #[clap(long, value_hint = ValueHint::FilePath)]
     pub session_file: Option<String>,
 
+    /// Show no output
+    #[clap(short, long)]
+    pub quiet: bool,
+
     #[clap(subcommand)]
     pub auth: Option<SubCommand>,
 }

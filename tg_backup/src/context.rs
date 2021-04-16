@@ -46,6 +46,7 @@ pub struct MainContext {
     pub(crate) included_chats: Option<Vec<i32>>,
     pub(crate) excluded_chats: Vec<i32>,
     pub(crate) output_dir: PathBuf,
+    pub(crate) quite_mode: bool,
 }
 
 impl MainContext {
@@ -54,6 +55,7 @@ impl MainContext {
         excluded_chats: Vec<i32>,
         batch_size: i32,
         output_dir: PathBuf,
+        quite_mode: bool,
     ) -> MainContext {
         MainContext {
             date: chrono::offset::Utc::now(),
@@ -62,6 +64,7 @@ impl MainContext {
             included_chats: loading_chats,
             excluded_chats,
             output_dir,
+            quite_mode,
         }
     }
 }

@@ -38,6 +38,7 @@ async fn test_loading() {
             batch_size: 5,
             clean: true,
             session_file: None,
+            quiet: false,
             auth: None,
             output: Some(backup_path),
         },

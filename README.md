@@ -44,6 +44,9 @@ FLAGS:
     -h, --help
             Prints help information
 
+    -q, --quiet
+            Show no output
+
     -V, --version
             Prints version information
 

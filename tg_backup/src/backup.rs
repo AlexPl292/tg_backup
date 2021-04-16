@@ -61,7 +61,9 @@ where
 
     // Check if authentication is needed
     if T::need_auth(&session_file) {
-        println!("Start tg_backup with `auth` command");
+        if !opts.quiet {
+            println!("Start tg_backup with `auth` command");
+        }
         return;
     }
 
@@ -87,6 +89,7 @@ where
         opts.excluded_chats,
         opts.batch_size,
         output_dir,
+        opts.quiet,
     );
 
     let main_mut_context = Arc::new(RwLock::new(MainMutContext {
@@ -187,7 +190,9 @@ where
             if let Ok(dialogs_count) = total_dialogs_count {
                 ctx.amount_of_dialogs = Some(dialogs_count);
                 log::info!("Saving {} dialogs", dialogs_count);
-                println!("Saving {} dialogs", dialogs_count);
+                if !main_ctx.quite_mode {
+                    println!("Saving {} dialogs", dialogs_count);
+                }
             }
         }
     }
@@ -224,10 +229,16 @@ fn save_current_information(
     excluded: Vec<i32>,
     batch_size: i32,
     output_dir: PathBuf,
+    quite_mode: bool,
 ) -> MainContext {
     let loading_chats = if chats.is_empty() { None } else { Some(chats) };
-    let mut main_context =
-        MainContext::init(loading_chats, excluded, batch_size, output_dir.clone());
+    let mut main_context = MainContext::init(
+        loading_chats,
+        excluded,
+        batch_size,
+        output_dir.clone(),
+        quite_mode,
+    );
 
     let path_string = format!("{}/backup.json", output_dir.as_path().display());
     let path = Path::new(path_string.as_str());
@@ -384,7 +395,9 @@ where
     // Initialize progress bar
     let mut pb = ProgressBar::new(amount_of_messages_to_load as u64);
     pb.message(format!("Loading {} [messages] ", visual_id).as_str());
-    chat_ctx.pb = Some(pb);
+    if !main_ctx.quite_mode {
+        chat_ctx.pb = Some(pb);
+    }
 
     log::info!(
         "Start loading loop. Counter: {}, total_size: {}, from: {}, until: {:?}",
