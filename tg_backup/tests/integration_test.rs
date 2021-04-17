@@ -22,6 +22,7 @@ use std::fs;
 
 use tempdir::TempDir;
 
+use std::path::{Path, PathBuf};
 use tg_backup;
 use tg_backup::{start_backup, Opts};
 use tg_backup_connector::test::{TestDDialog, TestTg};
@@ -99,12 +100,23 @@ async fn test_loading_with_dialogs() {
     files.sort();
     assert_eq!(vec!["backup.json", "chats", "logs", "me.json"], files);
 
-    let chats_dir = temp_dir.path().join("chats");
+    let chats_dir = assert_files(temp_dir.path(), "chats", vec!["0.my_chat.Username"]);
 
-    let mut files: Vec<String> = fs::read_dir(chats_dir)
+    assert_files(
+        chats_dir.as_path(),
+        "0.my_chat.Username",
+        vec!["info.json", "media", "members", "messages"],
+    );
+}
+
+fn assert_files(temp_dir: &Path, next_file: &str, dirs: Vec<&str>) -> PathBuf {
+    let chats_dir = temp_dir.join(next_file);
+
+    let mut files: Vec<String> = fs::read_dir(chats_dir.as_path())
         .unwrap()
         .map(|x| x.unwrap().file_name().to_str().unwrap().to_string())
         .collect();
     files.sort();
-    assert_eq!(vec!["0.my_chat.Username"], files);
+    assert_eq!(dirs, files);
+    chats_dir
 }

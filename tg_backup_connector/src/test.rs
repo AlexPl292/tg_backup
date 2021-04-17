@@ -18,14 +18,14 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::traits::{DChat, DDialog, DIter, DMsgIter, Tg, DMessage, DDocument, DPhoto};
-use async_trait::async_trait;
-use grammers_client::client::auth::{AuthorizationError, InvocationError};
-use tg_backup_types::Member;
+use crate::traits::{DChat, DDialog, DDocument, DIter, DMessage, DMsgIter, DPhoto, Tg};
 use crate::TgError;
-use chrono::{Utc, DateTime};
+use async_trait::async_trait;
+use chrono::{DateTime, Utc};
+use grammers_client::client::auth::{AuthorizationError, InvocationError};
 use grammers_client::types::Chat;
 use std::any::Any;
+use tg_backup_types::Member;
 
 #[derive(Clone)]
 pub struct TestTg {
@@ -80,7 +80,7 @@ impl Tg for TestTg {
         let msgs = test_chat.messages.clone();
         Box::new(TestDMsgIter {
             messages: msgs,
-            counter: 0
+            counter: 0,
         })
     }
 }
@@ -120,15 +120,17 @@ impl DMsgIter for TestDMsgIter {
     }
 
     async fn next(&mut self) -> Result<Option<Box<dyn DMessage>>, TgError> {
-        let message = self.messages.get(self.counter).map(|x| Box::new(x.clone()) as Box<dyn DMessage>);
+        let message = self
+            .messages
+            .get(self.counter)
+            .map(|x| Box::new(x.clone()) as Box<dyn DMessage>);
         self.counter += 1;
         Ok(message)
     }
 }
 
 #[derive(Clone)]
-pub struct TestDMessage {
-}
+pub struct TestDMessage {}
 
 impl DMessage for TestDMessage {
     fn date(&self) -> DateTime<Utc> {
@@ -216,7 +218,7 @@ impl DChat for TestDChat {
             verified: false,
             contact: false,
             mutual_contact: false,
-            deleted: false
+            deleted: false,
         })
     }
 
