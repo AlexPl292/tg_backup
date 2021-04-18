@@ -2,7 +2,7 @@
 
 Backup your messages from the Telegram messenger.
 
-`v0.1.0` this is a very initial version of the software.
+`v0.1.1` this is a very initial version of the software.
 
 ### Installation
 
