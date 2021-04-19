@@ -67,6 +67,9 @@ OPTIONS:
             If both included-chats and excluded_chats have the same value, the chat will be
             excluded.
 
+        --keep-last-n-logs <keep-last-n-logs>
+            Amount of log files that would be kept in the log directory [default: 1000]
+
     -o, --output <output>
             Backup output directory
 
