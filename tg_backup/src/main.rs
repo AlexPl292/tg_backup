@@ -27,6 +27,7 @@ mod attachment_type;
 mod backup;
 mod context;
 mod in_progress;
+mod logs;
 mod opts;
 mod types;
 

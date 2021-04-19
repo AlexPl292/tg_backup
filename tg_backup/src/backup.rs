@@ -35,6 +35,7 @@ use tg_backup_types::Member;
 
 use crate::context::{ChatContext, MainContext, MainMutContext, FILE, PHOTO, ROUND, VOICE};
 use crate::in_progress::{InProgress, InProgressInfo};
+use crate::logs::init_logs;
 use crate::opts::{Opts, SubCommand};
 use crate::types::Attachment::PhotoExpired;
 use crate::types::{
@@ -75,10 +76,7 @@ where
     let _ = fs::create_dir(output_dir.as_path());
 
     // Initialize logs
-    let log_dir = format!("{}/logs", output_dir.as_path().display().to_string());
-    let _ = fs::create_dir(log_dir.as_str());
-    let log_path = format!("{}/tg_backup.log", log_dir);
-    simple_logging::log_to_file(log_path, log::LevelFilter::Info).unwrap();
+    init_logs(&output_dir, opts.keep_last_n_logs);
 
     log::info!("Initializing telegram backup.");
     log::info!("Version v{}", VERSION.unwrap_or("Unknown"));

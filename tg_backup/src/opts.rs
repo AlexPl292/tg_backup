@@ -64,6 +64,10 @@ pub struct Opts {
     #[clap(short, long)]
     pub quiet: bool,
 
+    /// Amount of log files that would be kept in the log directory
+    #[clap(long, default_value = "1000")]
+    pub keep_last_n_logs: usize,
+
     #[clap(subcommand)]
     pub auth: Option<SubCommand>,
 }
