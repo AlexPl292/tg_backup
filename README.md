@@ -6,12 +6,14 @@ Backup your messages from the Telegram messenger.
 
 ### Installation
 
-At the moment you can install `tg_backup` using Homebrew.
+You can install `tg_backup` using Homebrew.
 
 ```
 brew tap AlexPl292/tg_backup
 brew install tg_backup
 ```
+
+Please visit GitHub Releases for builds for other platforms.
 
 ### Usage
 
