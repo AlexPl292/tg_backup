@@ -29,7 +29,7 @@ use std::path::{Path, PathBuf};
 use std::{env, fs};
 
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use grammers_client::client::auth::SignInError;
 use grammers_client::client::client::{Client, ClientHandle, Config};
 use grammers_client::client::dialogs::DialogIter;
@@ -41,8 +41,9 @@ use grammers_client::types::message::Message;
 use grammers_client::types::photo_sizes::VecExt;
 use grammers_mtsender::{AuthorizationError, InvocationError};
 use grammers_session::FileSession;
+use grammers_tl_types as tl;
 
-use tg_backup_types::Member;
+use tg_backup_types::{ForwardInfo, Member};
 
 use crate::test::TestTg;
 use crate::traits::{DChat, DDialog, DDocument, DIter, DMessage, DMsgIter, DPhoto, Tg};
@@ -181,6 +182,26 @@ impl DMessage for ProductionDMessage {
 
     fn sender_name(&self) -> Option<String> {
         self.message.sender().map(|x| x.name().to_string())
+    }
+
+    fn fwd_from(&self) -> Option<ForwardInfo> {
+        let tl::enums::MessageFwdHeader::Header(data) = self.message.forward_header()?;
+        let date =
+            DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(data.date as i64, 0), Utc);
+        let from_id = if let Some(from_id) = data.from_id {
+            if let tl::enums::Peer::User(user) = from_id {
+                Some(user.user_id)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        Some(ForwardInfo {
+            from_id,
+            from_name: data.from_name.clone(),
+            date,
+        })
     }
 }
 

@@ -9,3 +9,4 @@ license = "Apache-3.0"
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 grammers-client = { git = "https://github.com/AlexPl292/grammers" }
+chrono = { version = "0.4.19", features = ["serde"] }

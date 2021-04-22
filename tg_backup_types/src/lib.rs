@@ -18,6 +18,7 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use chrono::{DateTime, Utc};
 use grammers_client::types::User;
 use serde::{Deserialize, Serialize};
 
@@ -66,4 +67,11 @@ impl From<&User> for Member {
             deleted: user.deleted(),
         }
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ForwardInfo {
+    pub from_id: Option<i32>,
+    pub from_name: Option<String>,
+    pub date: DateTime<Utc>,
 }
