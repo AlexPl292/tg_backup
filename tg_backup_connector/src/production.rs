@@ -43,7 +43,7 @@ use grammers_mtsender::{AuthorizationError, InvocationError};
 use grammers_session::FileSession;
 use grammers_tl_types as tl;
 
-use tg_backup_types::{ForwardInfo, Member};
+use tg_backup_types::{ForwardInfo, Member, ReplyInfo};
 
 use crate::test::TestTg;
 use crate::traits::{DChat, DDialog, DDocument, DIter, DMessage, DMsgIter, DPhoto, Tg};
@@ -202,6 +202,12 @@ impl DMessage for ProductionDMessage {
             from_name: data.from_name.clone(),
             date,
         })
+    }
+
+    fn reply_to(&self) -> Option<ReplyInfo> {
+        self.message
+            .reply_to_message_id()
+            .map(|to_message_id| ReplyInfo { to_message_id })
     }
 }
 

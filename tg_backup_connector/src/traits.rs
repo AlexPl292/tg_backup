@@ -26,7 +26,7 @@ use chrono::{DateTime, Utc};
 use grammers_client::client::auth::{AuthorizationError, InvocationError};
 use grammers_client::types::{Chat, Photo};
 
-use tg_backup_types::{ForwardInfo, Member};
+use tg_backup_types::{ForwardInfo, Member, ReplyInfo};
 
 use crate::test::TestTg;
 use crate::TgError;
@@ -70,6 +70,7 @@ pub trait DMessage: Send {
     fn sender_id(&self) -> Option<i32>;
     fn sender_name(&self) -> Option<String>;
     fn fwd_from(&self) -> Option<ForwardInfo>;
+    fn reply_to(&self) -> Option<ReplyInfo>;
 }
 
 #[async_trait]

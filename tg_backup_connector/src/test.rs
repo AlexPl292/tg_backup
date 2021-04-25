@@ -25,7 +25,7 @@ use chrono::{DateTime, Utc};
 use grammers_client::client::auth::{AuthorizationError, InvocationError};
 use grammers_client::types::Chat;
 use std::any::Any;
-use tg_backup_types::{ForwardInfo, Member};
+use tg_backup_types::{ForwardInfo, Member, ReplyInfo};
 
 #[derive(Clone)]
 pub struct TestTg {
@@ -178,6 +178,10 @@ impl DMessage for TestDMessage {
     }
 
     fn fwd_from(&self) -> Option<ForwardInfo> {
+        todo!()
+    }
+
+    fn reply_to(&self) -> Option<ReplyInfo> {
         todo!()
     }
 }

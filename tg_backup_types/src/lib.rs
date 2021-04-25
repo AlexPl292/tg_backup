@@ -75,3 +75,8 @@ pub struct ForwardInfo {
     pub from_name: Option<String>,
     pub date: DateTime<Utc>,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct ReplyInfo {
+    pub to_message_id: i32,
+}

@@ -22,7 +22,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use tg_backup_connector::traits::{DChat, DMessage};
-use tg_backup_types::ForwardInfo;
+use tg_backup_types::{ForwardInfo, ReplyInfo};
 
 #[derive(Serialize, Deserialize)]
 pub struct ChatInfo {
@@ -45,6 +45,7 @@ pub struct MessageInfo {
     sender_id: Option<i32>,
     sender_name: Option<String>,
     forwarded_from: Option<ForwardInfo>,
+    reply_to: Option<ReplyInfo>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -77,6 +78,7 @@ pub fn msg_to_info(data: Box<dyn DMessage>) -> MessageInfo {
         sender_id: data.sender_id(),
         sender_name: data.sender_name(),
         forwarded_from: data.fwd_from(),
+        reply_to: data.reply_to(),
     }
 }
 
@@ -93,6 +95,7 @@ pub fn msg_to_file_info(data: Box<dyn DMessage>, attachment: Attachment) -> Mess
         sender_id: data.sender_id(),
         sender_name: data.sender_name(),
         forwarded_from: data.fwd_from(),
+        reply_to: data.reply_to(),
     }
 }
 
