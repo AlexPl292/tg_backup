@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Keep previous logs in log folder
 - Backup message forwards information
 - Backup message reply information
-- Add option to control an amount of running instances
+- Add an option to control the amount of running instances
 
 ## [0.1.1] - 2021-04-17
 ### Added
