@@ -68,6 +68,19 @@ OPTIONS:
             
             If both included-chats and excluded_chats have the same value, the chat will be
             excluded.
+    
+        --instances <instances>
+            Control how much instances of tg_backup are allowed
+            
+            possible values: multiple, per-output, single
+            
+            multiple: User can start multiple instances of this application.
+            
+            per-output: Only a single instance per output is allowed. Additional instances will be
+            immediately finished.
+            
+            single: Only a single instance is allowed. Additional instances will be immediately
+            finished. [default: per-output]
 
         --keep-last-n-logs <keep-last-n-logs>
             Amount of log files that would be kept in the log directory [default: 1000]

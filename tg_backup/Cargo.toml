@@ -23,6 +23,7 @@ home = "0.5.3"
 shellexpand = "2.1.0"
 tg_backup_connector = { path = "../tg_backup_connector" }
 tg_backup_types = { path = "../tg_backup_types" }
+single-instance = "0.3.1"
 
 [dev-dependencies]
 tempdir = "0.3.7"

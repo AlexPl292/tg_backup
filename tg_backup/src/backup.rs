@@ -36,11 +36,14 @@ use tg_backup_types::Member;
 use crate::context::{ChatContext, MainContext, MainMutContext, FILE, PHOTO, ROUND, VOICE};
 use crate::in_progress::{InProgress, InProgressInfo};
 use crate::logs::init_logs;
-use crate::opts::{Opts, SubCommand};
+use crate::opts::{Opts, SingleInstanceOption, SubCommand};
 use crate::types::Attachment::PhotoExpired;
 use crate::types::{
     chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo,
 };
+use single_instance::SingleInstance;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use tg_backup_connector::test::TestTg;
 use tg_backup_connector::traits::{DDialog, DMessage, Tg};
 
@@ -69,6 +72,16 @@ where
     }
 
     let output_dir = path_or_default(&opts.output);
+    let instance_option = execution_instance(&output_dir, &opts.instances);
+    if let Some(instance) = &instance_option {
+        if !instance.is_single() {
+            if !opts.quiet {
+                println!("An instance of tg_backup already running. Use --instances option for configuration.");
+            }
+            return;
+        }
+    }
+
     // Create backup directory
     if opts.clean {
         let _ = fs::remove_dir_all(output_dir.as_path());
@@ -117,6 +130,30 @@ where
                 log::info!("Start new backup loop");
                 false
             }
+        }
+    }
+
+    drop(instance_option)
+}
+
+fn execution_instance(
+    output_path: &PathBuf,
+    instances: &SingleInstanceOption,
+) -> Option<SingleInstance> {
+    match instances {
+        SingleInstanceOption::Multiple => None,
+        SingleInstanceOption::PerOutput => {
+            let mut s = DefaultHasher::new();
+            output_path.as_os_str().hash(&mut s);
+            let hash = s.finish();
+            let id = format!("tg_backup_{}", hash);
+            let instance = SingleInstance::new(id.as_str()).unwrap();
+            Some(instance)
+        }
+        SingleInstanceOption::Single => {
+            let id = format!("tg_backup");
+            let instance = SingleInstance::new(id.as_str()).unwrap();
+            Some(instance)
         }
     }
 }
