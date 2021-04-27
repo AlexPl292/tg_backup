@@ -24,6 +24,7 @@ use tempdir::TempDir;
 
 use std::path::{Path, PathBuf};
 use tg_backup;
+use tg_backup::SingleInstanceOption;
 use tg_backup::{start_backup, Opts};
 use tg_backup_connector::test::{TestDDialog, TestTg};
 
