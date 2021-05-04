@@ -31,7 +31,7 @@ use std::{env, fs};
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use grammers_client::client::auth::SignInError;
-use grammers_client::client::client::{Client, ClientHandle, Config};
+use grammers_client::client::client::{Client, Config};
 use grammers_client::client::dialogs::DialogIter;
 use grammers_client::client::messages::MessageIter;
 use grammers_client::types::chat::Chat;
@@ -40,7 +40,6 @@ use grammers_client::types::media::{Document, Photo};
 use grammers_client::types::message::Message;
 use grammers_client::types::photo_sizes::VecExt;
 use grammers_mtsender::{AuthorizationError, InvocationError};
-use grammers_session::FileSession;
 use grammers_tl_types as tl;
 
 use tg_backup_types::{ForwardInfo, Member, ReplyInfo};
@@ -49,6 +48,7 @@ use crate::test::TestTg;
 use crate::traits::{DChat, DDialog, DDocument, DIter, DMessage, DMsgIter, DPhoto, Tg};
 use crate::TgError;
 use std::any::Any;
+use grammers_session::Session;
 
 const DEFAULT_FILE_NAME: &'static str = "tg_backup.session";
 
@@ -259,7 +259,7 @@ impl DDocument for ProductionDDocument {
 
 #[derive(Clone)]
 pub struct ProductionTg {
-    handle: ClientHandle,
+    handle: Client,
 }
 
 #[async_trait]
@@ -276,7 +276,7 @@ impl Tg for ProductionTg {
 
         log::info!("Connecting to Telegram...");
         let client = Client::connect(Config {
-            session: FileSession::load(path).unwrap(),
+            session: Session::load_file(path).unwrap(),
             api_id,
             api_hash: api_hash.clone(),
             params: Default::default(),
@@ -284,7 +284,7 @@ impl Tg for ProductionTg {
         .await?;
         log::info!("Connected!");
 
-        let client_handle = client.handle();
+        let client_handle = client.clone();
 
         tokio::spawn(async move { client.run_until_disconnected().await });
         Ok(ProductionTg {
@@ -305,7 +305,7 @@ impl Tg for ProductionTg {
 
         log::info!("Connecting to Telegram...");
         let mut client = Client::connect(Config {
-            session: FileSession::create(path.as_path()).unwrap(),
+            session: Session::load_file_or_create(path.as_path()).unwrap(),
             api_id,
             api_hash: api_hash.clone(),
             params: Default::default(),
@@ -342,7 +342,7 @@ impl Tg for ProductionTg {
             log::info!("Signed in!");
             log::info!("Create session file under {:?}", path.as_path());
             println!("Create session file under {:?}", path.as_path());
-            match client.session().save() {
+            match client.session().save_to_file(path.as_path()) {
                 Ok(_) => {}
                 Err(e) => {
                     log::error!(
