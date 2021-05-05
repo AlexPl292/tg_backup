@@ -23,6 +23,7 @@ use core::option::Option;
 use core::option::Option::{None, Some};
 use core::result::Result;
 use core::result::Result::{Err, Ok};
+use std::any::Any;
 use std::io;
 use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
@@ -39,7 +40,9 @@ use grammers_client::types::dialog::Dialog;
 use grammers_client::types::media::{Document, Photo};
 use grammers_client::types::message::Message;
 use grammers_client::types::photo_sizes::VecExt;
+use grammers_mtproto::mtp::RpcError;
 use grammers_mtsender::{AuthorizationError, InvocationError};
+use grammers_session::Session;
 use grammers_tl_types as tl;
 
 use tg_backup_types::{ForwardInfo, Member, ReplyInfo};
@@ -47,8 +50,8 @@ use tg_backup_types::{ForwardInfo, Member, ReplyInfo};
 use crate::test::TestTg;
 use crate::traits::{DChat, DDialog, DDocument, DIter, DMessage, DMsgIter, DPhoto, Tg};
 use crate::TgError;
-use grammers_session::Session;
-use std::any::Any;
+use std::thread::sleep;
+use std::time::Duration;
 
 const DEFAULT_FILE_NAME: &'static str = "tg_backup.session";
 
@@ -90,6 +93,16 @@ impl DChat for ProductionDChat {
                         res.push(member);
                     }
                     Ok(None) => break,
+                    Err(InvocationError::Rpc(RpcError { name, code, value })) => {
+                        if name == "FLOOD_WAIT" {
+                            log::warn!("Flood wait: {}", value.unwrap());
+                            sleep(Duration::from_secs(value.unwrap() as u64))
+                        } else if name == "FILE_MIGRATE" {
+                            log::warn!("File migrate: {}", value.unwrap());
+                        } else {
+                            log::error!("Error {}, {:?}", name, value)
+                        }
+                    }
                     Err(e) => panic!("{}", e),
                 }
             }
@@ -109,7 +122,7 @@ impl DChat for ProductionDChat {
     fn skip_backup(&self) -> bool {
         match self.chat {
             Chat::User(_) => false,
-            Chat::Group(_) => true,
+            Chat::Group(_) => false,
             Chat::Channel(_) => true,
         }
     }
