@@ -223,7 +223,7 @@ impl DChat for TestDChat {
     }
 
     async fn members(&self) -> Vec<Member> {
-        todo!()
+        vec![]
     }
 
     fn visual_id(&self) -> String {
