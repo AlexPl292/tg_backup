@@ -28,4 +28,3 @@ mod types;
 
 pub use backup::start_backup;
 pub use opts::Opts;
-pub use opts::SingleInstanceOption;

@@ -21,7 +21,6 @@
 use clap::AppSettings;
 use clap::Clap;
 use clap::ValueHint;
-use std::str::FromStr;
 
 //#[clap(after_help = "Beware `-d`, dragons be here")]
 // We can put something at the end
@@ -69,20 +68,6 @@ pub struct Opts {
     #[clap(long, default_value = "1000")]
     pub keep_last_n_logs: usize,
 
-    /// Control how much instances of tg_backup are allowed
-    ///
-    /// possible values: multiple, per-output, single
-    ///
-    /// multiple: User can start multiple instances of this application.
-    ///
-    /// per-output: Only a single instance per output is allowed. Additional instances will be
-    ///     immediately finished.
-    ///
-    /// single: Only a single instance is allowed. Additional instances will be immediately finished.
-    ///
-    #[clap(long, default_value = "per-output")]
-    pub instances: SingleInstanceOption,
-
     #[clap(subcommand)]
     pub auth: Option<SubCommand>,
 }
@@ -102,33 +87,4 @@ pub struct Auth {
     /// Custom name for session file
     #[clap(long, default_value = "tg_backup.session")]
     pub session_file_name: String,
-}
-
-#[derive(Clap)]
-pub enum SingleInstanceOption {
-    /// User can start multiple instances of this application
-    Multiple,
-
-    /// Only a single instance per output is allowed
-    ///
-    /// Additional instances will be immediately finished
-    PerOutput,
-
-    /// Only a single instance is allowed
-    ///
-    /// Additional instances will be immediately finished
-    Single,
-}
-
-impl FromStr for SingleInstanceOption {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "multiple" => Ok(SingleInstanceOption::Multiple),
-            "per-output" => Ok(SingleInstanceOption::PerOutput),
-            "single" => Ok(SingleInstanceOption::Single),
-            _ => Err(String::from("Cannot parse")),
-        }
-    }
 }

@@ -24,7 +24,6 @@ use tempdir::TempDir;
 
 use std::path::{Path, PathBuf};
 use tg_backup;
-use tg_backup::SingleInstanceOption;
 use tg_backup::{start_backup, Opts};
 use tg_backup_connector::test::{TestDDialog, TestTg};
 
@@ -44,7 +43,6 @@ async fn test_loading() {
             session_file: None,
             quiet: false,
             keep_last_n_logs: 1000,
-            instances: SingleInstanceOption::Multiple,
             auth: None,
             output: Some(backup_path),
         },
@@ -91,7 +89,6 @@ async fn test_loading_with_dialogs() {
             session_file: None,
             quiet: true,
             keep_last_n_logs: 1000,
-            instances: SingleInstanceOption::Multiple,
             auth: None,
             output: Some(backup_path),
         },

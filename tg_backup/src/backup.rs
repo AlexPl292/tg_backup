@@ -35,14 +35,11 @@ use tg_backup_connector::TgError;
 use crate::context::{ChatContext, MainContext, MainMutContext, FILE, PHOTO, ROUND, VOICE};
 use crate::in_progress::{InProgress, InProgressInfo};
 use crate::logs::init_logs;
-use crate::opts::{Opts, SingleInstanceOption, SubCommand};
+use crate::opts::{Opts, SubCommand};
 use crate::types::Attachment::PhotoExpired;
 use crate::types::{
     chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo,
 };
-use single_instance::SingleInstance;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 use tg_backup_connector::test::TestTg;
 use tg_backup_connector::traits::{DDialog, DMessage, Tg};
 
@@ -71,21 +68,20 @@ where
     }
 
     let output_dir = path_or_default(&opts.output);
-    let instance_option = execution_instance(&output_dir, &opts.instances);
-    if let Some(instance) = &instance_option {
-        if !instance.is_single() {
-            if !opts.quiet {
-                println!("An instance of tg_backup already running. Use --instances option for configuration.");
-            }
-            return;
-        }
-    }
-
     // Create backup directory
     if opts.clean {
         let _ = fs::remove_dir_all(output_dir.as_path());
     }
     let _ = fs::create_dir(output_dir.as_path());
+
+    // Check instance uniqueness
+    let continue_execution = create_lock_file(output_dir.as_path());
+    if !continue_execution {
+        if !opts.quiet {
+            println!("An instance of tg_backup already running");
+        }
+        return;
+    }
 
     // Initialize logs
     init_logs(&output_dir, opts.keep_last_n_logs);
@@ -98,7 +94,7 @@ where
         opts.included_chats,
         opts.excluded_chats,
         opts.batch_size,
-        output_dir,
+        output_dir.as_path(),
         opts.quiet,
     );
 
@@ -132,29 +128,38 @@ where
         }
     }
 
-    drop(instance_option)
+    delete_lock_file(output_dir.as_path());
 }
 
-fn execution_instance(
-    output_path: &PathBuf,
-    instances: &SingleInstanceOption,
-) -> Option<SingleInstance> {
-    match instances {
-        SingleInstanceOption::Multiple => None,
-        SingleInstanceOption::PerOutput => {
-            let mut s = DefaultHasher::new();
-            output_path.as_os_str().hash(&mut s);
-            let hash = s.finish();
-            let id = format!("tg_backup_{}", hash);
-            let instance = SingleInstance::new(id.as_str()).unwrap();
-            Some(instance)
+fn create_lock_file(output_dir: &Path) -> bool {
+    let lock_file_path = output_dir.join("file.lock");
+    let lock_file_exists = lock_file_path.exists();
+    if lock_file_exists {
+        let pid: u32 = fs::read_to_string(lock_file_path.as_path())
+            .map(|x| x.parse().unwrap_or(0))
+            .unwrap_or(0);
+        let all_processes = psutil::process::pids().unwrap_or(vec![]);
+        let process_exists = all_processes.contains(&pid);
+        if process_exists {
+            false
+        } else {
+            let pid = std::process::id().to_string();
+            let _ = fs::write(lock_file_path, pid);
+            true
         }
-        SingleInstanceOption::Single => {
-            let id = format!("tg_backup");
-            let instance = SingleInstance::new(id.as_str()).unwrap();
-            Some(instance)
+    } else {
+        let pid = std::process::id().to_string();
+        let lock_file = File::create(lock_file_path.as_path());
+        if let Ok(_) = lock_file {
+            fs::write(lock_file_path.as_path(), pid).unwrap();
         }
+        true
     }
+}
+
+fn delete_lock_file(output_dir: &Path) {
+    let lock_file_path = output_dir.join("file.lock");
+    let _ = fs::remove_file(lock_file_path);
 }
 
 fn path_or_default(folder: &Option<String>) -> PathBuf {
@@ -262,7 +267,7 @@ fn save_current_information(
     chats: Vec<i32>,
     excluded: Vec<i32>,
     batch_size: i32,
-    output_dir: PathBuf,
+    output_dir: &Path,
     quite_mode: bool,
 ) -> MainContext {
     let loading_chats = if chats.is_empty() { None } else { Some(chats) };
@@ -270,11 +275,11 @@ fn save_current_information(
         loading_chats,
         excluded,
         batch_size,
-        output_dir.clone(),
+        output_dir.clone().to_path_buf(),
         quite_mode,
     );
 
-    let path_string = format!("{}/backup.json", output_dir.as_path().display());
+    let path_string = format!("{}/backup.json", output_dir.display());
     let path = Path::new(path_string.as_str());
     if path.exists() {
         let file = BufReader::new(File::open(path).unwrap());
