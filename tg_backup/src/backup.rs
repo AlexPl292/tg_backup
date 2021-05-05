@@ -31,7 +31,6 @@ use tokio::task;
 use tokio::time::Duration;
 
 use tg_backup_connector::TgError;
-use tg_backup_types::Member;
 
 use crate::context::{ChatContext, MainContext, MainMutContext, FILE, PHOTO, ROUND, VOICE};
 use crate::in_progress::{InProgress, InProgressInfo};
@@ -326,12 +325,9 @@ where
         }
     }
 
-    let member = if let Some(member) = chat.user() {
-        member
-    } else {
-        // Save only one-to-one dialogs at the moment
+    if chat.skip_backup() {
         return Ok(());
-    };
+    }
 
     let visual_id = chat.visual_id();
 
@@ -411,7 +407,8 @@ where
     .unwrap();
 
     // Save members
-    let members = vec![Member::Me, member];
+    let members_await = chat.members();
+    let members = members_await.await;
     let members_folder = chat_path.join("members");
     let _ = fs::create_dir(&members_folder);
     let members_path = members_folder.join("members.json");

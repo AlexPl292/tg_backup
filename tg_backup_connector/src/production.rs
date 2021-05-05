@@ -71,31 +71,27 @@ impl DChat for ProductionDChat {
         self.chat.clone()
     }
 
-    fn user(&self) -> Option<Member> {
-        if let Chat::User(user) = &self.chat {
-            Some(user.into())
-        } else {
-            // Save only one-to-one dialogs at the moment
-            None
-        }
-    }
-
     fn as_any(&self) -> &dyn Any {
         self
     }
 
     async fn members(&self) -> Vec<Member> {
-        let mut participant_iter = self.client.iter_participants(&self.chat);
         let mut res = vec![];
-        loop {
-            let next = participant_iter.next().await;
-            match next {
-                Ok(Some(next_one)) => {
-                    let member = next_one.user.into();
-                    res.push(member);
+        if let Chat::User(user) = &self.chat {
+            res.push(Member::Me);
+            res.push(user.into());
+        } else {
+            let mut participant_iter = self.client.iter_participants(&self.chat);
+            loop {
+                let next = participant_iter.next().await;
+                match next {
+                    Ok(Some(next_one)) => {
+                        let member = next_one.user.into();
+                        res.push(member);
+                    }
+                    Ok(None) => break,
+                    Err(e) => panic!("{}", e),
                 }
-                Ok(None) => break,
-                Err(e) => panic!("{}", e),
             }
         }
         res
@@ -105,9 +101,16 @@ impl DChat for ProductionDChat {
         if let Chat::User(user) = &self.chat {
             let username = user.username().unwrap_or("NO_USERNAME");
             format!("{}.{}", &self.chat.name(), username)
-        }
-        else {
+        } else {
             format!("{}", &self.chat.name())
+        }
+    }
+
+    fn skip_backup(&self) -> bool {
+        match self.chat {
+            Chat::User(_) => false,
+            Chat::Group(_) => true,
+            Chat::Channel(_) => true,
         }
     }
 }

@@ -218,19 +218,6 @@ impl DChat for TestDChat {
         todo!()
     }
 
-    fn user(&self) -> Option<Member> {
-        Some(Member::User {
-            id: 0,
-            username: Some(String::from("Username")),
-            first_name: "".to_string(),
-            last_name: None,
-            verified: false,
-            contact: false,
-            mutual_contact: false,
-            deleted: false,
-        })
-    }
-
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -241,5 +228,9 @@ impl DChat for TestDChat {
 
     fn visual_id(&self) -> String {
         todo!()
+    }
+
+    fn skip_backup(&self) -> bool {
+        false
     }
 }

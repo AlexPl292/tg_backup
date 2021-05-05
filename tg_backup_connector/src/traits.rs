@@ -37,10 +37,10 @@ pub trait DChat: Send {
     fn id(&self) -> i32;
     fn name(&self) -> String;
     fn chat(&self) -> Chat;
-    fn user(&self) -> Option<Member>;
     fn as_any(&self) -> &dyn Any;
     async fn members(&self) -> Vec<Member>;
     fn visual_id(&self) -> String;
+    fn skip_backup(&self) -> bool;
 }
 
 pub trait DDialog: Send {
