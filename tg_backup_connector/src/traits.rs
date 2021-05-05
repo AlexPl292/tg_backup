@@ -32,12 +32,14 @@ use crate::test::TestTg;
 use crate::TgError;
 use std::any::Any;
 
+#[async_trait]
 pub trait DChat: Send {
     fn id(&self) -> i32;
     fn name(&self) -> String;
     fn chat(&self) -> Chat;
     fn user(&self) -> Option<Member>;
     fn as_any(&self) -> &dyn Any;
+    async fn members(&self) -> Vec<Member>;
 }
 
 pub trait DDialog: Send {

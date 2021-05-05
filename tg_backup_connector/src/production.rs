@@ -47,15 +47,17 @@ use tg_backup_types::{ForwardInfo, Member, ReplyInfo};
 use crate::test::TestTg;
 use crate::traits::{DChat, DDialog, DDocument, DIter, DMessage, DMsgIter, DPhoto, Tg};
 use crate::TgError;
-use std::any::Any;
 use grammers_session::Session;
+use std::any::Any;
 
 const DEFAULT_FILE_NAME: &'static str = "tg_backup.session";
 
 pub struct ProductionDChat {
     chat: Chat,
+    client: Client,
 }
 
+#[async_trait]
 impl DChat for ProductionDChat {
     fn id(&self) -> i32 {
         self.chat.id()
@@ -81,21 +83,43 @@ impl DChat for ProductionDChat {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    async fn members(&self) -> Vec<Member> {
+        let mut participant_iter = self.client.iter_participants(&self.chat);
+        let mut res = vec![];
+        loop {
+            let next = participant_iter.next().await;
+            match next {
+                Ok(Some(next_one)) => {
+                    let member = next_one.user.into();
+                    res.push(member);
+                }
+                Ok(None) => break,
+                Err(e) => panic!("{}", e),
+            }
+        }
+        res
+    }
 }
 
 pub struct ProductionDDialog {
     dialog: Dialog,
+    client: Client,
 }
 
 impl DDialog for ProductionDDialog {
     fn chat(&mut self) -> Box<dyn DChat> {
         let chat = self.dialog.chat().clone();
-        Box::new(ProductionDChat { chat })
+        Box::new(ProductionDChat {
+            chat,
+            client: self.client.clone(),
+        })
     }
 }
 
 pub struct ProductionDIter {
     dialogs: DialogIter,
+    client: Client,
 }
 
 #[async_trait]
@@ -105,10 +129,14 @@ impl DIter for ProductionDIter {
     }
 
     async fn next(&mut self) -> Result<Option<Box<dyn DDialog>>, InvocationError> {
-        self.dialogs
-            .next()
-            .await
-            .map(|x| x.map(|y| Box::new(ProductionDDialog { dialog: y }) as Box<dyn DDialog>))
+        self.dialogs.next().await.map(|x| {
+            x.map(|y| {
+                Box::new(ProductionDDialog {
+                    dialog: y,
+                    client: self.client.clone(),
+                }) as Box<dyn DDialog>
+            })
+        })
     }
 }
 
@@ -376,6 +404,7 @@ impl Tg for ProductionTg {
         let iter_dialogs = self.handle.iter_dialogs();
         Box::new(ProductionDIter {
             dialogs: iter_dialogs,
+            client: self.handle.clone(),
         })
     }
 

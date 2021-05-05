@@ -204,6 +204,7 @@ pub struct TestDChat {
     messages: Vec<TestDMessage>,
 }
 
+#[async_trait]
 impl DChat for TestDChat {
     fn id(&self) -> i32 {
         0
@@ -232,5 +233,9 @@ impl DChat for TestDChat {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    async fn members(&self) -> Vec<Member> {
+        todo!()
     }
 }
