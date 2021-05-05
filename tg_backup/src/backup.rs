@@ -415,7 +415,7 @@ where
     let info_file = File::create(info_file_path).unwrap();
     serde_json::to_writer_pretty(
         &info_file,
-        &chat_to_info(chat, global_loading_from, total_messages),
+        &chat_to_info(&chat, global_loading_from, total_messages),
     )
     .unwrap();
 

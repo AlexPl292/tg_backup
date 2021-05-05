@@ -100,7 +100,7 @@ pub fn msg_to_file_info(data: Box<dyn DMessage>, attachment: Attachment) -> Mess
 }
 
 pub fn chat_to_info(
-    data: Box<dyn DChat>,
+    data: &Box<dyn DChat>,
     loaded_up_to: DateTime<Utc>,
     total_messages: usize,
 ) -> ChatInfo {
