@@ -93,7 +93,11 @@ impl DChat for ProductionDChat {
                         res.push(member);
                     }
                     Ok(None) => break,
-                    Err(InvocationError::Rpc(RpcError { name, code, value })) => {
+                    Err(InvocationError::Rpc(RpcError {
+                        name,
+                        code: _,
+                        value,
+                    })) => {
                         if name == "FLOOD_WAIT" {
                             log::warn!("Flood wait: {}", value.unwrap());
                             sleep(Duration::from_secs(value.unwrap() as u64))
