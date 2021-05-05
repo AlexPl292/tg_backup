@@ -289,10 +289,15 @@ fn save_current_information(
     let path_string = format!("{}/backup.json", output_dir.display());
     let path = Path::new(path_string.as_str());
     if path.exists() {
-        let file = BufReader::new(File::open(path).unwrap());
-        let parsed_file: Result<BackUpInfo, _> = serde_json::from_reader(file);
-        if let Ok(data) = parsed_file {
-            main_context.date_from = Some(data.date)
+        let open_file = File::open(path);
+        if let Ok(file) = open_file {
+            let file = BufReader::new(file);
+            let parsed_file: Result<BackUpInfo, _> = serde_json::from_reader(file);
+            if let Ok(data) = parsed_file {
+                main_context.date_from = Some(data.date)
+            }
+        } else {
+            let _ = fs::remove_file(path);
         }
     }
 
