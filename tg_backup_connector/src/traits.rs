@@ -40,6 +40,7 @@ pub trait DChat: Send {
     fn user(&self) -> Option<Member>;
     fn as_any(&self) -> &dyn Any;
     async fn members(&self) -> Vec<Member>;
+    fn visual_id(&self) -> String;
 }
 
 pub trait DDialog: Send {

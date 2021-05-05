@@ -333,16 +333,7 @@ where
         return Ok(());
     };
 
-    let username = if let Member::User { username, .. } = &member {
-        username
-    } else {
-        panic!()
-    };
-    let visual_id = format!(
-        "{}.{}",
-        chat_name,
-        username.as_ref().unwrap_or(&String::from("NO_USERNAME"))
-    );
+    let visual_id = chat.visual_id();
 
     log::info!("Saving chat. name: {} id: {}", chat_name, chat_id);
 

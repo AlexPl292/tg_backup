@@ -100,6 +100,16 @@ impl DChat for ProductionDChat {
         }
         res
     }
+
+    fn visual_id(&self) -> String {
+        if let Chat::User(user) = &self.chat {
+            let username = user.username().unwrap_or("NO_USERNAME");
+            format!("{}.{}", &self.chat.name(), username)
+        }
+        else {
+            format!("{}", &self.chat.name())
+        }
+    }
 }
 
 pub struct ProductionDDialog {
