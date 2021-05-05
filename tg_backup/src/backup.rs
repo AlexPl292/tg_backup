@@ -40,6 +40,8 @@ use crate::types::Attachment::PhotoExpired;
 use crate::types::{
     chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo,
 };
+use std::collections::HashSet;
+use sysinfo::{AsU32, Pid, System, SystemExt};
 use tg_backup_connector::test::TestTg;
 use tg_backup_connector::traits::{DDialog, DMessage, Tg};
 
@@ -138,7 +140,12 @@ fn create_lock_file(output_dir: &Path) -> bool {
         let pid: u32 = fs::read_to_string(lock_file_path.as_path())
             .map(|x| x.parse().unwrap_or(0))
             .unwrap_or(0);
-        let all_processes = psutil::process::pids().unwrap_or(vec![]);
+        let all_processes = System::new_all()
+            .get_processes()
+            .keys()
+            .cloned()
+            .map(|x: Pid| x.as_u32())
+            .collect::<HashSet<u32>>();
         let process_exists = all_processes.contains(&pid);
         if process_exists {
             false
