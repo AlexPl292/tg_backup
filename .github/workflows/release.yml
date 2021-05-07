@@ -2,6 +2,10 @@ name: Release
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - 'v*.*.*'
+
 
 jobs:
   pre-checks:
@@ -68,6 +72,10 @@ jobs:
           APP_IDENTITY: ${{ secrets.APP_IDENTITY }}
         run: gon ./gon.json
 
+      - uses: actions/upload-artifact@v2
+        with:
+          path: tg_backup-x86_64-apple-darwin.zip
+
   build-windows:
 
     needs: [ pre-checks ]
@@ -87,6 +95,10 @@ jobs:
           files: target/x86_64-pc-windows-msvc/release/tg_backup.exe
           dest: tg_backup-x86_64-pc-windows-msvc.zip
 
+      - uses: actions/upload-artifact@v2
+        with:
+          path: tg_backup-x86_64-pc-windows-msvc.zip
+
   build-linux:
 
     needs: [ pre-checks ]
@@ -105,3 +117,40 @@ jobs:
         with:
           files: target/x86_64-unknown-linux-gnu/release/tg_backup
           dest: tg_backup-x86_64-unknown-linux-gnu.zip
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: tg_backup-x86_64-unknown-linux-gnu.zip
+
+  perform-release:
+
+    needs: [ build-macos, build-windows, build-linux ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          path: |
+            tg_backup-x86_64-unknown-linux-gnu.zip
+            tg_backup-x86_64-pc-windows-msvc.zip
+            tg_backup-x86_64-apple-darwin.zip
+
+      - name: Extract release notes
+        uses: ffurrer2/extract-release-notes@v1
+        with:
+          release_notes_file: RELEASE_NOTES.md
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            tg_backup-x86_64-unknown-linux-gnu.zip
+            tg_backup-x86_64-pc-windows-msvc.zip
+            tg_backup-x86_64-apple-darwin.zip
+          body_path: RELEASE_NOTES.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

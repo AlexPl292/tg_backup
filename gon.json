@@ -9,6 +9,6 @@
     "application_identity" : "B399F01325098695E49D219AC3B3FBA011F80EC1"
   },
   "zip" :{
-    "output_path" : "./target/x86_64-apple-darwin/release/tg_backup-x86_64-apple-darwin.zip"
+    "output_path" : "./tg_backup-x86_64-apple-darwin.zip"
   }
 }
