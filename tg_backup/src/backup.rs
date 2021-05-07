@@ -103,6 +103,7 @@ where
     let main_mut_context = Arc::new(RwLock::new(MainMutContext {
         already_finished: vec![],
         amount_of_dialogs: None,
+        total_flood_wait: 0,
     }));
 
     // Save me
@@ -536,8 +537,19 @@ where
             }
             Err(TgError::Rpc { name, value }) => {
                 if name == "FLOOD_WAIT" {
-                    log::warn!("Flood wait: {}", value.unwrap());
-                    sleep(Duration::from_secs(value.unwrap() as u64))
+                    let wait_time = value.unwrap();
+                    let total_wait = if let Ok(mut ctx) = main_mut_ctx.write() {
+                        ctx.total_flood_wait += wait_time;
+                        ctx.total_flood_wait
+                    } else {
+                        0
+                    };
+                    log::warn!(
+                        "Flood wait: {}, total flood wait: {}",
+                        wait_time,
+                        total_wait
+                    );
+                    sleep(Duration::from_secs(wait_time as u64))
                 } else if name == "FILE_MIGRATE" {
                     log::warn!("File migrate: {}", value.unwrap());
                 } else {
