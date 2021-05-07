@@ -227,7 +227,7 @@ impl DChat for TestDChat {
     }
 
     fn visual_id(&self) -> String {
-        String::from("test")
+        String::from("my_chat.Username")
     }
 
     fn skip_backup(&self) -> bool {
