@@ -17,11 +17,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-#    - name: Build
-#      run: cargo build --verbose
-#      env:
-#        TG_ID: ${{ secrets.TG_ID }}
-#        TG_HASH: ${{ secrets.TG_HASH }}
+    - name: Setup environment
+      run: echo "RUSTFLAGS=-D warnings" >> $GITHUB_ENV
+    - name: rustfmt
+      run: cargo fmt -- --check
+    - name: Build
+      run: cargo build --verbose
+      env:
+        TG_ID: ${{ secrets.TG_ID }}
+        TG_HASH: ${{ secrets.TG_HASH }}
     - name: Run tests
       run: cargo test --verbose
       env:
