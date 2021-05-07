@@ -133,13 +133,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Download artifacts
+      - name: Download linux artifacts
         uses: actions/download-artifact@v2
         with:
-          path: |
-            tg_backup-x86_64-unknown-linux-gnu.zip
-            tg_backup-x86_64-pc-windows-msvc.zip
-            tg_backup-x86_64-apple-darwin.zip
+          path: tg_backup-x86_64-unknown-linux-gnu.zip
+
+      - name: Download windows artifacts
+        uses: actions/download-artifact@v2
+        with:
+          path: tg_backup-x86_64-pc-windows-msvc.zip
+
+      - name: Download macos artifacts
+        uses: actions/download-artifact@v2
+        with:
+          path: tg_backup-x86_64-apple-darwin.zip
 
       - name: Extract release notes
         uses: ffurrer2/extract-release-notes@v1
@@ -157,3 +164,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Update the Homebrew formula with latest release
+        uses: NSHipster/update-homebrew-formula-action@main
+        with:
+          repository: AlexPl292/tg_backup
+          tap: AlexPl292/homebrew-tg_backup
+          formula: Formula/tg_backup.rb
+        env:
+          GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
