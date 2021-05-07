@@ -137,19 +137,16 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: tg_backup-x86_64-unknown-linux-gnu.zip
-          path: tg_backup-x86_64-unknown-linux-gnu.zip
 
       - name: Download windows artifacts
         uses: actions/download-artifact@v2
         with:
           name: tg_backup-x86_64-pc-windows-msvc.zip
-          path: tg_backup-x86_64-pc-windows-msvc.zip
 
       - name: Download macos artifacts
         uses: actions/download-artifact@v2
         with:
           name: tg_backup-x86_64-apple-darwin.zip
-          path: tg_backup-x86_64-apple-darwin.zip
 
       - name: Extract release notes
         uses: ffurrer2/extract-release-notes@v1
