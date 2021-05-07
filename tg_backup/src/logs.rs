@@ -22,7 +22,7 @@ use std::fs;
 use std::fs::DirEntry;
 use std::path::PathBuf;
 
-pub(crate) fn init_logs(output_dir: &PathBuf, max_size: usize) {
+pub(crate) fn init_logs(output_dir: &PathBuf, max_size: usize, panic_to_stderr: bool) {
     let log_dir = format!("{}/logs", output_dir.as_path().display().to_string());
     let _ = fs::create_dir(log_dir.as_str());
 
@@ -47,4 +47,8 @@ pub(crate) fn init_logs(output_dir: &PathBuf, max_size: usize) {
     let now_formatted = now.format("%Y%m%d-%H%M%S");
     let log_path = format!("{}/tg_backup-{}.log", log_dir, now_formatted);
     simple_logging::log_to_file(log_path, log::LevelFilter::Info).unwrap();
+
+    if !panic_to_stderr {
+        log_panics::init();
+    }
 }

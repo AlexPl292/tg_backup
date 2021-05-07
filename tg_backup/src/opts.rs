@@ -68,6 +68,12 @@ pub struct Opts {
     #[clap(long, default_value = "1000")]
     pub keep_last_n_logs: usize,
 
+    /// By default, panics are saved to log file. Use this option to show panics in stderr.
+    ///
+    /// If enabled, panics will be printed in stderr and not in logs.
+    #[clap(long)]
+    pub panic_to_stderr: bool,
+
     #[clap(subcommand)]
     pub auth: Option<SubCommand>,
 }

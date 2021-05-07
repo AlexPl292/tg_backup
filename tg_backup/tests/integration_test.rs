@@ -45,6 +45,7 @@ async fn test_loading() {
             keep_last_n_logs: 1000,
             auth: None,
             output: Some(backup_path),
+            panic_to_stderr: true,
         },
     )
     .await;
@@ -91,6 +92,7 @@ async fn test_loading_with_dialogs() {
             keep_last_n_logs: 1000,
             auth: None,
             output: Some(backup_path),
+            panic_to_stderr: true,
         },
     )
     .await;

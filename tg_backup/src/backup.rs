@@ -86,7 +86,7 @@ where
     }
 
     // Initialize logs
-    init_logs(&output_dir, opts.keep_last_n_logs);
+    init_logs(&output_dir, opts.keep_last_n_logs, opts.panic_to_stderr);
 
     log::info!("Initializing telegram backup.");
     log::info!("Version v{}", VERSION.unwrap_or("Unknown"));

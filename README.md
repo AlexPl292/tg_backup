@@ -46,6 +46,11 @@ FLAGS:
     -h, --help
             Prints help information
 
+        --panic-to-stderr
+            By default, panics are saved to log file. Use this option to show panics in stderr.
+            
+            If enabled, panics will be printed in stderr and not in logs.
+
     -q, --quiet
             Show no output
 
