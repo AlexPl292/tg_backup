@@ -136,16 +136,19 @@ jobs:
       - name: Download linux artifacts
         uses: actions/download-artifact@v2
         with:
+          name: tg_backup-x86_64-unknown-linux-gnu.zip
           path: tg_backup-x86_64-unknown-linux-gnu.zip
 
       - name: Download windows artifacts
         uses: actions/download-artifact@v2
         with:
+          name: tg_backup-x86_64-pc-windows-msvc.zip
           path: tg_backup-x86_64-pc-windows-msvc.zip
 
       - name: Download macos artifacts
         uses: actions/download-artifact@v2
         with:
+          name: tg_backup-x86_64-apple-darwin.zip
           path: tg_backup-x86_64-apple-darwin.zip
 
       - name: Extract release notes
@@ -164,11 +167,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Extract version
+        id: extract-version
+        run: |
+          printf "::set-output name=%s::%s\n" tag-name "${GITHUB_REF#refs/tags/}"
+
       - name: Update the Homebrew formula with latest release
-        uses: NSHipster/update-homebrew-formula-action@main
+        uses: mislav/bump-homebrew-formula-action@v1
         with:
-          repository: AlexPl292/tg_backup
-          tap: AlexPl292/homebrew-tg_backup
-          formula: Formula/tg_backup.rb
+          formula-name: tg_backup
+          download-url: https://github.com/AlexPl292/tg_backup/releases/download/${{ steps.extract-version.outputs.tag-name }}/tg_backup-x86_64-apple-darwin.zip
+          homebrew-tap: AlexPl292/homebrew-tg_backup
         env:
-          GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
+          COMMITTER_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
