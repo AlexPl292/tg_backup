@@ -1,0 +1,62 @@
+name: Rust
+
+on:
+  workflow_dispatch:
+
+jobs:
+  pre-checks:
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup environment
+        run: echo "RUSTFLAGS=-D warnings" >> $GITHUB_ENV
+
+      - name: rustfmt
+        run: cargo fmt -- --check
+
+      - name: Run tests
+        run: cargo test --verbose
+        env:
+          TG_ID: ${{ secrets.TG_ID }}
+          TG_HASH: ${{ secrets.TG_HASH }}
+
+  build-macos:
+
+    needs: [ pre-checks ]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Build
+        run: cargo build --verbose --release --target x86_64-apple-darwin
+        env:
+          TG_ID: ${{ secrets.TG_ID }}
+          TG_HASH: ${{ secrets.TG_HASH }}
+
+  build-windows:
+
+    needs: [ pre-checks ]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Build
+        run: cargo build --verbose --release --target x86_64-pc-windows-gnu
+        env:
+          TG_ID: ${{ secrets.TG_ID }}
+          TG_HASH: ${{ secrets.TG_HASH }}
+
+  build-linux:
+
+    needs: [ pre-checks ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Build
+        run: cargo build --verbose --release --target x86_64-unknown-linux-gnu
+        env:
+          TG_ID: ${{ secrets.TG_ID }}
+          TG_HASH: ${{ secrets.TG_HASH }}
