@@ -1059,7 +1059,7 @@ dependencies = [
 
 [[package]]
 name = "tg_backup"
-version = "0.1.8"
+version = "0.1.9"
 dependencies = [
  "chrono",
  "clap",
@@ -1080,7 +1080,7 @@ dependencies = [
 
 [[package]]
 name = "tg_backup_connector"
-version = "0.1.8"
+version = "0.1.9"
 dependencies = [
  "async-trait",
  "chrono",
@@ -1098,7 +1098,7 @@ dependencies = [
 
 [[package]]
 name = "tg_backup_types"
-version = "0.1.8"
+version = "0.1.9"
 dependencies = [
  "chrono",
  "grammers-client",
