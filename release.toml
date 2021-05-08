@@ -1,2 +1,6 @@
-consolidate-commits = true
-tag-name = "v{{prev_version}}"
+# https://github.com/sunng87/cargo-release
+
+sign-commit = true
+
+# Reenable in main crait
+disable-tag = true
