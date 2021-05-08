@@ -1,0 +1,2 @@
+consolidate-commits = true
+tag-name = "v{{prev_version}}"
