@@ -587,6 +587,7 @@ async fn save_message(message_x: Box<dyn DMessage>, chat_ctx: &mut ChatContext) 
     let types = &chat_ctx.types;
     let option_photo = message_x.photo();
     let option_document = message_x.document();
+    let option_geo = message_x.geo();
     let res = if let Some(photo) = option_photo {
         if let Some(pb) = chat_ctx.pb.as_mut() {
             pb.message(format!("Loading {} [photo   ] ", chat_ctx.visual_id.as_str()).as_str());
@@ -703,6 +704,8 @@ async fn save_message(message_x: Box<dyn DMessage>, chat_ctx: &mut ChatContext) 
         } else {
             Some(attachment)
         }
+    } else if let Some(geo) = option_geo {
+        Some(Attachment::Geo(geo))
     } else {
         None
     };

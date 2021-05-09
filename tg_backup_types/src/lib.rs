@@ -80,3 +80,10 @@ pub struct ForwardInfo {
 pub struct ReplyInfo {
     pub to_message_id: i32,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct GeoInfo {
+    pub longitude: f64,
+    pub latitude: f64,
+    pub accuracy_radius: Option<i32>,
+}

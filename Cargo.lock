@@ -325,7 +325,7 @@ dependencies = [
 [[package]]
 name = "grammers-client"
 version = "0.3.0"
-source = "git+https://github.com/AlexPl292/grammers#1f8605ec5841195dc0e3c4578576086292e2cb2f"
+source = "git+https://github.com/AlexPl292/grammers#730694e5054bfea8f61b3f114b54b2fc64a66945"
 dependencies = [
  "chrono",
  "grammers-crypto",
@@ -344,7 +344,7 @@ dependencies = [
 [[package]]
 name = "grammers-crypto"
 version = "0.3.0"
-source = "git+https://github.com/AlexPl292/grammers#1f8605ec5841195dc0e3c4578576086292e2cb2f"
+source = "git+https://github.com/AlexPl292/grammers#730694e5054bfea8f61b3f114b54b2fc64a66945"
 dependencies = [
  "aes",
  "getrandom",
@@ -359,7 +359,7 @@ dependencies = [
 [[package]]
 name = "grammers-mtproto"
 version = "0.3.0"
-source = "git+https://github.com/AlexPl292/grammers#1f8605ec5841195dc0e3c4578576086292e2cb2f"
+source = "git+https://github.com/AlexPl292/grammers#730694e5054bfea8f61b3f114b54b2fc64a66945"
 dependencies = [
  "bytes",
  "crc",
@@ -374,7 +374,7 @@ dependencies = [
 [[package]]
 name = "grammers-mtsender"
 version = "0.3.0"
-source = "git+https://github.com/AlexPl292/grammers#1f8605ec5841195dc0e3c4578576086292e2cb2f"
+source = "git+https://github.com/AlexPl292/grammers#730694e5054bfea8f61b3f114b54b2fc64a66945"
 dependencies = [
  "bytes",
  "grammers-mtproto",
@@ -386,7 +386,7 @@ dependencies = [
 [[package]]
 name = "grammers-session"
 version = "0.3.0"
-source = "git+https://github.com/AlexPl292/grammers#1f8605ec5841195dc0e3c4578576086292e2cb2f"
+source = "git+https://github.com/AlexPl292/grammers#730694e5054bfea8f61b3f114b54b2fc64a66945"
 dependencies = [
  "grammers-tl-gen",
  "grammers-tl-parser",
@@ -397,7 +397,7 @@ dependencies = [
 [[package]]
 name = "grammers-tl-gen"
 version = "0.3.0"
-source = "git+https://github.com/AlexPl292/grammers#1f8605ec5841195dc0e3c4578576086292e2cb2f"
+source = "git+https://github.com/AlexPl292/grammers#730694e5054bfea8f61b3f114b54b2fc64a66945"
 dependencies = [
  "grammers-tl-parser",
 ]
@@ -405,7 +405,7 @@ dependencies = [
 [[package]]
 name = "grammers-tl-parser"
 version = "1.0.1"
-source = "git+https://github.com/AlexPl292/grammers#1f8605ec5841195dc0e3c4578576086292e2cb2f"
+source = "git+https://github.com/AlexPl292/grammers#730694e5054bfea8f61b3f114b54b2fc64a66945"
 dependencies = [
  "crc32fast",
 ]
@@ -413,7 +413,7 @@ dependencies = [
 [[package]]
 name = "grammers-tl-types"
 version = "0.3.0"
-source = "git+https://github.com/AlexPl292/grammers#1f8605ec5841195dc0e3c4578576086292e2cb2f"
+source = "git+https://github.com/AlexPl292/grammers#730694e5054bfea8f61b3f114b54b2fc64a66945"
 dependencies = [
  "grammers-tl-gen",
  "grammers-tl-parser",

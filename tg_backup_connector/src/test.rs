@@ -25,7 +25,7 @@ use chrono::{DateTime, Utc};
 use grammers_client::client::auth::{AuthorizationError, InvocationError};
 use grammers_client::types::Chat;
 use std::any::Any;
-use tg_backup_types::{ForwardInfo, Member, ReplyInfo};
+use tg_backup_types::{ForwardInfo, Member, ReplyInfo, GeoInfo};
 
 #[derive(Clone)]
 pub struct TestTg {
@@ -150,6 +150,10 @@ impl DMessage for TestDMessage {
     }
 
     fn document(&self) -> Option<Box<dyn DDocument>> {
+        todo!()
+    }
+
+    fn geo(&self) -> Option<GeoInfo> {
         todo!()
     }
 

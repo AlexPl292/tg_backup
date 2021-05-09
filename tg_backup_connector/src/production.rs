@@ -45,11 +45,12 @@ use grammers_mtsender::{AuthorizationError, InvocationError};
 use grammers_session::Session;
 use grammers_tl_types as tl;
 
-use tg_backup_types::{ForwardInfo, Member, ReplyInfo};
+use tg_backup_types::{ForwardInfo, GeoInfo, Member, ReplyInfo};
 
 use crate::test::TestTg;
 use crate::traits::{DChat, DDialog, DDocument, DIter, DMessage, DMsgIter, DPhoto, Tg};
 use crate::TgError;
+use grammers_client::types::Media;
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -216,6 +217,19 @@ impl DMessage for ProductionDMessage {
         self.message
             .document()
             .map(|x| Box::new(ProductionDDocument { doc: x }) as Box<dyn DDocument>)
+    }
+
+    fn geo(&self) -> Option<GeoInfo> {
+        let media = self.message.media();
+        if let Some(Media::Geo(geo)) = media {
+            Some(GeoInfo {
+                latitude: geo.latitude(),
+                longitude: geo.longitude(),
+                accuracy_radius: geo.accuracy_radius(),
+            })
+        } else {
+            None
+        }
     }
 
     fn edit_date(&self) -> Option<DateTime<Utc>> {
