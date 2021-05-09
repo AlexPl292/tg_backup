@@ -7,22 +7,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f26201604c87b1e01bd3d98f8d5d9a8fcbb815e8cedb41ffccbeb4bf593a35fe"
 
 [[package]]
-name = "aes-soft"
-version = "0.6.4"
+name = "aes"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be14c7498ea50828a38d0e24a765ed2effe92a705885b57d029cd67d45744072"
+checksum = "32380222440685202b62f23002e668519a6bf2d8df5e7655ed96223b6482b4be"
 dependencies = [
+ "cfg-if",
  "cipher",
- "opaque-debug",
-]
-
-[[package]]
-name = "aesni"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea2e11f5e94c2f7d386164cc2aa1f97823fed6f259e486940a71c174dd01b0ce"
-dependencies = [
- "cipher",
+ "cpufeatures",
  "opaque-debug",
 ]
 
@@ -109,9 +101,9 @@ dependencies = [
 
 [[package]]
 name = "cipher"
-version = "0.2.5"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12f8e7987cbd042a63249497f41aed09f8e65add917ea6566effbc56578d6801"
+checksum = "7ee52072ec15386f770805afd189a01c8841be8696bed250fa2f13c4c0d6dfb7"
 dependencies = [
  "generic-array",
 ]
@@ -155,10 +147,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ea221b5284a47e40033bf9b66f35f984ec0ea2931eb03505246cd27a963f981b"
 
 [[package]]
-name = "cpuid-bool"
-version = "0.1.2"
+name = "cpufeatures"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8aebca1129a03dc6dc2b127edd729435bbc4a37e1d5f4d7513165089ceb02634"
+checksum = "dec1028182c380cc45a2e2c5ec841134f2dfd0f8f5f0a5bcd68004f81b5efdf4"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "crc"
@@ -329,8 +324,8 @@ dependencies = [
 
 [[package]]
 name = "grammers-client"
-version = "0.2.0"
-source = "git+https://github.com/AlexPl292/grammers#66378255786d0badb85559a88b0db9ec56ad9b51"
+version = "0.3.0"
+source = "git+https://github.com/AlexPl292/grammers#1f8605ec5841195dc0e3c4578576086292e2cb2f"
 dependencies = [
  "chrono",
  "grammers-crypto",
@@ -348,16 +343,14 @@ dependencies = [
 
 [[package]]
 name = "grammers-crypto"
-version = "0.2.0"
-source = "git+https://github.com/AlexPl292/grammers#66378255786d0badb85559a88b0db9ec56ad9b51"
+version = "0.3.0"
+source = "git+https://github.com/AlexPl292/grammers#1f8605ec5841195dc0e3c4578576086292e2cb2f"
 dependencies = [
- "aes-soft",
- "aesni",
+ "aes",
  "getrandom",
  "glass_pumpkin",
  "hmac",
  "num-bigint",
- "once_cell",
  "pbkdf2",
  "sha1",
  "sha2",
@@ -365,8 +358,8 @@ dependencies = [
 
 [[package]]
 name = "grammers-mtproto"
-version = "0.2.0"
-source = "git+https://github.com/AlexPl292/grammers#66378255786d0badb85559a88b0db9ec56ad9b51"
+version = "0.3.0"
+source = "git+https://github.com/AlexPl292/grammers#1f8605ec5841195dc0e3c4578576086292e2cb2f"
 dependencies = [
  "bytes",
  "crc",
@@ -380,11 +373,10 @@ dependencies = [
 
 [[package]]
 name = "grammers-mtsender"
-version = "0.2.0"
-source = "git+https://github.com/AlexPl292/grammers#66378255786d0badb85559a88b0db9ec56ad9b51"
+version = "0.3.0"
+source = "git+https://github.com/AlexPl292/grammers#1f8605ec5841195dc0e3c4578576086292e2cb2f"
 dependencies = [
  "bytes",
- "grammers-crypto",
  "grammers-mtproto",
  "grammers-tl-types",
  "log",
@@ -393,10 +385,9 @@ dependencies = [
 
 [[package]]
 name = "grammers-session"
-version = "0.2.0"
-source = "git+https://github.com/AlexPl292/grammers#66378255786d0badb85559a88b0db9ec56ad9b51"
+version = "0.3.0"
+source = "git+https://github.com/AlexPl292/grammers#1f8605ec5841195dc0e3c4578576086292e2cb2f"
 dependencies = [
- "grammers-crypto",
  "grammers-tl-gen",
  "grammers-tl-parser",
  "grammers-tl-types",
@@ -405,24 +396,24 @@ dependencies = [
 
 [[package]]
 name = "grammers-tl-gen"
-version = "0.2.0"
-source = "git+https://github.com/AlexPl292/grammers#66378255786d0badb85559a88b0db9ec56ad9b51"
+version = "0.3.0"
+source = "git+https://github.com/AlexPl292/grammers#1f8605ec5841195dc0e3c4578576086292e2cb2f"
 dependencies = [
  "grammers-tl-parser",
 ]
 
 [[package]]
 name = "grammers-tl-parser"
-version = "1.0.0"
-source = "git+https://github.com/AlexPl292/grammers#66378255786d0badb85559a88b0db9ec56ad9b51"
+version = "1.0.1"
+source = "git+https://github.com/AlexPl292/grammers#1f8605ec5841195dc0e3c4578576086292e2cb2f"
 dependencies = [
  "crc32fast",
 ]
 
 [[package]]
 name = "grammers-tl-types"
-version = "0.2.0"
-source = "git+https://github.com/AlexPl292/grammers#66378255786d0badb85559a88b0db9ec56ad9b51"
+version = "0.3.0"
+source = "git+https://github.com/AlexPl292/grammers#1f8605ec5841195dc0e3c4578576086292e2cb2f"
 dependencies = [
  "grammers-tl-gen",
  "grammers-tl-parser",
@@ -685,12 +676,13 @@ checksum = "afb2e1c3ee07430c2cf76151675e583e0f19985fa6efae47d6848a3e2c824f85"
 
 [[package]]
 name = "password-hash"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7561a874264c351c35ccde0da29a98dea5f2483357c049673319c7f3446d14da"
+checksum = "c1a5d4e9c205d2c1ae73b84aab6240e98218c0e72e63b50422cfb2d1ca952282"
 dependencies = [
  "base64ct",
  "rand_core 0.6.2",
+ "subtle",
 ]
 
 [[package]]
@@ -959,13 +951,13 @@ checksum = "2579985fda508104f7587689507983eadd6a6e84dd35d6d115361f530916fa0d"
 
 [[package]]
 name = "sha2"
-version = "0.9.3"
+version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa827a14b29ab7f44778d14a88d3cb76e949c45083f7dbfa507d0cb699dc12de"
+checksum = "d8f6b75b17576b792bef0db1bcc4b8b8bcdf9506744cf34b974195487af6cff2"
 dependencies = [
  "block-buffer",
  "cfg-if",
- "cpuid-bool",
+ "cpufeatures",
  "digest",
  "opaque-debug",
 ]
@@ -1015,9 +1007,9 @@ dependencies = [
 
 [[package]]
 name = "sysinfo"
-version = "0.17.2"
+version = "0.17.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f5e4b56d92c7c56cc8a06df0cc06860a8ec6102e9a8a5ee85dff90afbeadf3d"
+checksum = "501819ce9ea1571e6c1a0330e34efbd2c7893aeb0d24ac1f177d17eb5224ebf2"
 dependencies = [
  "cfg-if",
  "core-foundation-sys",
