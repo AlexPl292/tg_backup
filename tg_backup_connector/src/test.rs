@@ -25,7 +25,7 @@ use chrono::{DateTime, Utc};
 use grammers_client::client::auth::{AuthorizationError, InvocationError};
 use grammers_client::types::Chat;
 use std::any::Any;
-use tg_backup_types::{ForwardInfo, Member, ReplyInfo, GeoInfo};
+use tg_backup_types::{ForwardInfo, GeoInfo, Member, ReplyInfo};
 
 #[derive(Clone)]
 pub struct TestTg {

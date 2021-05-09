@@ -22,7 +22,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use tg_backup_connector::traits::{DChat, DMessage};
-use tg_backup_types::{ForwardInfo, ReplyInfo, GeoInfo};
+use tg_backup_types::{ForwardInfo, GeoInfo, ReplyInfo};
 
 #[derive(Serialize, Deserialize)]
 pub struct ChatInfo {
