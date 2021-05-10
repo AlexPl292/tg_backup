@@ -1,6 +1,6 @@
 [package]
 name = "tg_backup_connector"
-version = "0.1.9"
+version = "0.1.10-alpha.0"
 authors = ["Alex Plate <AlexPl292@gmail.com>"]
 edition = "2018"
 license = "Apache-3.0"
