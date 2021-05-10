@@ -22,7 +22,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use tg_backup_connector::traits::{DChat, DMessage};
-use tg_backup_types::{ForwardInfo, GeoInfo, GeoLiveInfo, ReplyInfo};
+use tg_backup_types::{ContactInfo, ForwardInfo, GeoInfo, GeoLiveInfo, ReplyInfo};
 
 #[derive(Serialize, Deserialize)]
 pub struct ChatInfo {
@@ -62,6 +62,7 @@ pub enum Attachment {
     Round(FileInfo),
     Geo(GeoInfo),
     GeoLive(GeoLiveInfo),
+    Contact(ContactInfo),
     PhotoExpired,
     Error(String),
 }

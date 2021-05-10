@@ -26,7 +26,7 @@ use chrono::{DateTime, Utc};
 use grammers_client::client::auth::{AuthorizationError, InvocationError};
 use grammers_client::types::{Chat, Photo};
 
-use tg_backup_types::{ForwardInfo, GeoInfo, GeoLiveInfo, Member, ReplyInfo};
+use tg_backup_types::{ContactInfo, ForwardInfo, GeoInfo, GeoLiveInfo, Member, ReplyInfo};
 
 use crate::test::TestTg;
 use crate::TgError;
@@ -68,6 +68,7 @@ pub trait DMessage: Send {
     fn document(&self) -> Option<Box<dyn DDocument>>;
     fn geo(&self) -> Option<GeoInfo>;
     fn geo_live(&self) -> Option<GeoLiveInfo>;
+    fn contact(&self) -> Option<ContactInfo>;
     fn edit_date(&self) -> Option<DateTime<Utc>>;
     fn mentioned(&self) -> bool;
     fn outgoing(&self) -> bool;

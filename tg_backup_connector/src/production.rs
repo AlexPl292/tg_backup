@@ -45,7 +45,7 @@ use grammers_mtsender::{AuthorizationError, InvocationError};
 use grammers_session::Session;
 use grammers_tl_types as tl;
 
-use tg_backup_types::{ForwardInfo, GeoInfo, GeoLiveInfo, Member, ReplyInfo};
+use tg_backup_types::{ContactInfo, ForwardInfo, GeoInfo, GeoLiveInfo, Member, ReplyInfo};
 
 use crate::test::TestTg;
 use crate::traits::{DChat, DDialog, DDocument, DIter, DMessage, DMsgIter, DPhoto, Tg};
@@ -236,6 +236,20 @@ impl DMessage for ProductionDMessage {
                 heading: geo.heading(),
                 period: geo.period(),
                 proximity_notification_radius: geo.proximity_notification_radius(),
+            })
+        } else {
+            None
+        }
+    }
+
+    fn contact(&self) -> Option<ContactInfo> {
+        let media = self.message.media();
+        if let Some(Media::Contact(contact)) = media {
+            Some(ContactInfo {
+                first_name: contact.first_name(),
+                last_name: contact.last_name(),
+                phone_number: contact.phone_number(),
+                vcard: contact.vcard(),
             })
         } else {
             None

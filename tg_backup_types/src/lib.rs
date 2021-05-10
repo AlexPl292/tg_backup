@@ -106,3 +106,11 @@ pub struct GeoLiveInfo {
     pub heading: Option<i32>,
     pub proximity_notification_radius: Option<i32>,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct ContactInfo {
+    pub phone_number: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub vcard: String,
+}
