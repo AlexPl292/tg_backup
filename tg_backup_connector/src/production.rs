@@ -45,7 +45,7 @@ use grammers_mtsender::{AuthorizationError, InvocationError};
 use grammers_session::Session;
 use grammers_tl_types as tl;
 
-use tg_backup_types::{ForwardInfo, GeoInfo, Member, ReplyInfo};
+use tg_backup_types::{ForwardInfo, GeoInfo, GeoLiveInfo, Member, ReplyInfo};
 
 use crate::test::TestTg;
 use crate::traits::{DChat, DDialog, DDocument, DIter, DMessage, DMsgIter, DPhoto, Tg};
@@ -222,10 +222,20 @@ impl DMessage for ProductionDMessage {
     fn geo(&self) -> Option<GeoInfo> {
         let media = self.message.media();
         if let Some(Media::Geo(geo)) = media {
-            Some(GeoInfo {
-                latitude: geo.latitude(),
-                longitude: geo.longitude(),
-                accuracy_radius: geo.accuracy_radius(),
+            geo.point().map(|it| it.into())
+        } else {
+            None
+        }
+    }
+
+    fn geo_live(&self) -> Option<GeoLiveInfo> {
+        let media = self.message.media();
+        if let Some(Media::GeoLive(geo)) = media {
+            Some(GeoLiveInfo {
+                point: geo.point().map(|it| it.into()),
+                heading: geo.heading(),
+                period: geo.period(),
+                proximity_notification_radius: geo.proximity_notification_radius(),
             })
         } else {
             None

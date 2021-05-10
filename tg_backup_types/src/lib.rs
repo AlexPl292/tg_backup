@@ -19,6 +19,7 @@
  */
 
 use chrono::{DateTime, Utc};
+use grammers_client::types::media::GeoPoint;
 use grammers_client::types::User;
 use serde::{Deserialize, Serialize};
 
@@ -86,4 +87,22 @@ pub struct GeoInfo {
     pub longitude: f64,
     pub latitude: f64,
     pub accuracy_radius: Option<i32>,
+}
+
+impl From<GeoPoint> for GeoInfo {
+    fn from(point: GeoPoint) -> Self {
+        Self {
+            latitude: point.latitude,
+            longitude: point.longitude,
+            accuracy_radius: point.accuracy_radius,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct GeoLiveInfo {
+    pub point: Option<GeoInfo>,
+    pub period: i32,
+    pub heading: Option<i32>,
+    pub proximity_notification_radius: Option<i32>,
 }
