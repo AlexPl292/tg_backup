@@ -28,7 +28,6 @@ use grammers_client::types::{Chat, Photo};
 
 use tg_backup_types::{ContactInfo, ForwardInfo, GeoInfo, GeoLiveInfo, Member, ReplyInfo};
 
-use crate::test::TestTg;
 use crate::TgError;
 use std::any::Any;
 
@@ -97,10 +96,7 @@ pub trait DDocument: Send {
 
 #[async_trait]
 pub trait Tg: Clone + Send {
-    async fn create_connection(
-        test_data: Option<TestTg>,
-        session_file: &Option<String>,
-    ) -> Result<Self, AuthorizationError>
+    async fn create_connection(session_file: &Option<String>) -> Result<Self, AuthorizationError>
     where
         Self: Sized;
 

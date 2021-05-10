@@ -47,7 +47,6 @@ use grammers_tl_types as tl;
 
 use tg_backup_types::{ContactInfo, ForwardInfo, GeoInfo, GeoLiveInfo, Member, ReplyInfo};
 
-use crate::test::TestTg;
 use crate::traits::{DChat, DDialog, DDocument, DIter, DMessage, DMsgIter, DPhoto, Tg};
 use crate::TgError;
 use grammers_client::types::Media;
@@ -360,10 +359,7 @@ pub struct ProductionTg {
 
 #[async_trait]
 impl Tg for ProductionTg {
-    async fn create_connection(
-        _test_data: Option<TestTg>,
-        session_file: &Option<String>,
-    ) -> Result<Self, AuthorizationError> {
+    async fn create_connection(session_file: &Option<String>) -> Result<Self, AuthorizationError> {
         let api_id = env!("TG_ID").parse().expect("TG_ID invalid");
         let api_hash = env!("TG_HASH").to_string();
 

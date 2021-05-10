@@ -35,5 +35,5 @@ mod types;
 async fn main() {
     let opts: Opts = Opts::parse();
 
-    start_backup::<ProductionTg>(None, opts).await;
+    start_backup::<ProductionTg>(opts).await;
 }

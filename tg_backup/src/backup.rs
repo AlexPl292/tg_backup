@@ -42,13 +42,12 @@ use crate::types::{
 };
 use std::collections::HashSet;
 use sysinfo::{AsU32, Pid, System, SystemExt};
-use tg_backup_connector::test::TestTg;
 use tg_backup_connector::traits::{DDialog, DMessage, Tg};
 
 const PATH: &'static str = "backup";
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 
-pub async fn start_backup<T>(test_data: Option<TestTg>, opts: Opts)
+pub async fn start_backup<T>(opts: Opts)
 where
     T: Tg + 'static,
 {
@@ -107,7 +106,7 @@ where
     }));
 
     // Save me
-    let mut tg: T = get_connection::<T>(test_data.clone(), &session_file).await;
+    let mut tg: T = get_connection::<T>(&session_file).await;
     save_me(&mut tg, &main_ctx).await;
     drop(tg);
 
@@ -115,7 +114,7 @@ where
     let mut finish_loop = false;
     let arc_main_ctx = Arc::new(main_ctx);
     while !finish_loop {
-        let tg: T = get_connection::<T>(test_data.clone(), &session_file).await;
+        let tg: T = get_connection::<T>(&session_file).await;
 
         let result = start_iteration(tg, arc_main_ctx.clone(), main_mut_context.clone()).await;
 
@@ -182,13 +181,13 @@ fn path_or_default(folder: &Option<String>) -> PathBuf {
     }
 }
 
-async fn get_connection<T>(test_data: Option<TestTg>, session_file: &Option<String>) -> T
+async fn get_connection<T>(session_file: &Option<String>) -> T
 where
     T: Tg,
 {
     let mut counter = 0;
     loop {
-        let connect = T::create_connection(test_data.clone(), session_file).await;
+        let connect = T::create_connection(session_file).await;
         if let Ok(tg) = connect {
             return tg;
         }
