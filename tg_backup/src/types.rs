@@ -21,7 +21,9 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use tg_backup_connector::traits::{DChat, DMessage};
+use crate::ext::MessageExt;
+use grammers_client::types::Message;
+use tg_backup_connector::traits::DChat;
 use tg_backup_types::{ContactInfo, ForwardInfo, GeoInfo, GeoLiveInfo, ReplyInfo};
 
 #[derive(Serialize, Deserialize)]
@@ -67,9 +69,9 @@ pub enum Attachment {
     Error(String),
 }
 
-pub fn msg_to_info(data: Box<dyn DMessage>) -> MessageInfo {
+pub fn msg_to_info(data: &Message) -> MessageInfo {
     MessageInfo {
-        text: data.text(),
+        text: data.text().to_string(),
         id: data.id(),
         date: data.date(),
         attachment: None,
@@ -77,16 +79,16 @@ pub fn msg_to_info(data: Box<dyn DMessage>) -> MessageInfo {
         mentioned: data.mentioned(),
         outgoing: data.outgoing(),
         pinned: data.pinned(),
-        sender_id: data.sender_id(),
-        sender_name: data.sender_name(),
+        sender_id: data.sender().map(|x| x.id()),
+        sender_name: data.sender().map(|x| x.name().to_string()),
         forwarded_from: data.fwd_from(),
         reply_to: data.reply_to(),
     }
 }
 
-pub fn msg_to_file_info(data: Box<dyn DMessage>, attachment: Attachment) -> MessageInfo {
+pub fn msg_to_file_info(data: &Message, attachment: Attachment) -> MessageInfo {
     MessageInfo {
-        text: data.text(),
+        text: data.text().to_string(),
         id: data.id(),
         date: data.date(),
         attachment: Some(attachment),
@@ -94,8 +96,8 @@ pub fn msg_to_file_info(data: Box<dyn DMessage>, attachment: Attachment) -> Mess
         mentioned: data.mentioned(),
         outgoing: data.outgoing(),
         pinned: data.pinned(),
-        sender_id: data.sender_id(),
-        sender_name: data.sender_name(),
+        sender_id: data.sender().map(|x| x.id()),
+        sender_name: data.sender().map(|x| x.name().to_string()),
         forwarded_from: data.fwd_from(),
         reply_to: data.reply_to(),
     }

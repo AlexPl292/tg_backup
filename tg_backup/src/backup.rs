@@ -33,6 +33,7 @@ use tokio::time::Duration;
 use tg_backup_connector::TgError;
 
 use crate::context::{ChatContext, MainContext, MainMutContext, FILE, PHOTO, ROUND, VOICE};
+use crate::ext::MessageExt;
 use crate::in_progress::{InProgress, InProgressInfo};
 use crate::logs::init_logs;
 use crate::opts::{Opts, SubCommand};
@@ -40,9 +41,11 @@ use crate::types::Attachment::PhotoExpired;
 use crate::types::{
     chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo,
 };
+use grammers_client::types::photo_sizes::VecExt;
+use grammers_client::types::Message;
 use std::collections::HashSet;
 use sysinfo::{AsU32, Pid, System, SystemExt};
-use tg_backup_connector::traits::{DDialog, DMessage, Tg};
+use tg_backup_connector::traits::{DDialog, Tg};
 
 const PATH: &'static str = "backup";
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
@@ -469,7 +472,7 @@ where
                         return Ok(());
                     }
                 }
-                let saving_result = save_message(message, &mut chat_ctx).await;
+                let saving_result = save_message(&message, &mut chat_ctx).await;
                 if let Err(_) = saving_result {
                     log::error!("Error while loading");
                     if let Some(pb) = chat_ctx.pb.as_mut() {
@@ -581,14 +584,14 @@ where
     Ok(())
 }
 
-async fn save_message(message_x: Box<dyn DMessage>, chat_ctx: &mut ChatContext) -> Result<(), ()> {
-    let message_text = message_x.text();
+async fn save_message(message: &Message, chat_ctx: &mut ChatContext) -> Result<(), ()> {
+    let message_text = message.text();
     let types = &chat_ctx.types;
-    let option_photo = message_x.photo();
-    let option_document = message_x.document();
-    let option_geo = message_x.geo();
-    let option_geo_live = message_x.geo_live();
-    let option_contact = message_x.contact();
+    let option_photo = message.photo();
+    let option_document = message.document();
+    let option_geo = message.geo();
+    let option_geo_live = message.geo_live();
+    let option_contact = message.contact();
     let res = if let Some(photo) = option_photo {
         if let Some(pb) = chat_ctx.pb.as_mut() {
             pb.message(format!("Loading {} [photo   ] ", chat_ctx.visual_id.as_str()).as_str());
@@ -599,8 +602,12 @@ async fn save_message(message_x: Box<dyn DMessage>, chat_ctx: &mut ChatContext) 
         if let Some(id) = photo_id {
             let file_name = format!("{}@photo.jpg", id);
             let photos_path = current_type.path().join(file_name.as_str());
-            let data_corut = photo.load_largest(&photos_path);
-            let downloaded = data_corut.await;
+            let downloaded = photo
+                .thumbs()
+                .largest()
+                .unwrap()
+                .download(photos_path)
+                .await;
             let photo_path = format!("../{}/{}", current_type.folder, file_name);
             let attachment = Attachment::Photo(FileInfo {
                 id,
@@ -634,7 +641,7 @@ async fn save_message(message_x: Box<dyn DMessage>, chat_ctx: &mut ChatContext) 
         }
     } else if let Some(mut doc) = option_document {
         let doc_id = doc.id();
-        let doc_name = doc.name();
+        let doc_name = doc.name().to_string();
         let (attachment, file_path) = if doc.is_round_message() {
             if let Some(pb) = chat_ctx.pb.as_mut() {
                 pb.message(format!("Loading {} [round   ] ", chat_ctx.visual_id.as_str()).as_str());
@@ -716,12 +723,12 @@ async fn save_message(message_x: Box<dyn DMessage>, chat_ctx: &mut ChatContext) 
     };
 
     if let Some(attachment) = res {
-        let message_info = msg_to_file_info(message_x, attachment);
+        let message_info = msg_to_file_info(&message, attachment);
         chat_ctx.messages_accumulator.push(message_info);
         Ok(())
     } else {
         log::debug!("Loading message {}", message_text);
-        chat_ctx.messages_accumulator.push(msg_to_info(message_x));
+        chat_ctx.messages_accumulator.push(msg_to_info(&message));
         Ok(())
     }
 }

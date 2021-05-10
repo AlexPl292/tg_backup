@@ -26,30 +26,25 @@ use core::result::Result::{Err, Ok};
 use std::any::Any;
 use std::io;
 use std::io::{BufRead, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::{env, fs};
 
 use async_trait::async_trait;
-use chrono::{DateTime, NaiveDateTime, Utc};
 use grammers_client::client::auth::SignInError;
 use grammers_client::client::client::{Client, Config};
 use grammers_client::client::dialogs::DialogIter;
 use grammers_client::client::messages::MessageIter;
 use grammers_client::types::chat::Chat;
 use grammers_client::types::dialog::Dialog;
-use grammers_client::types::media::{Document, Photo};
 use grammers_client::types::message::Message;
-use grammers_client::types::photo_sizes::VecExt;
 use grammers_mtproto::mtp::RpcError;
 use grammers_mtsender::{AuthorizationError, InvocationError};
 use grammers_session::Session;
-use grammers_tl_types as tl;
 
-use tg_backup_types::{ContactInfo, ForwardInfo, GeoInfo, GeoLiveInfo, Member, ReplyInfo};
+use tg_backup_types::Member;
 
-use crate::traits::{DChat, DDialog, DDocument, DIter, DMessage, DMsgIter, DPhoto, Tg};
+use crate::traits::{DChat, DDialog, DIter, DMsgIter, Tg};
 use crate::TgError;
-use grammers_client::types::Media;
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -180,175 +175,8 @@ impl DMsgIter for ProductionDMsgIter {
         self.iter.total().await
     }
 
-    async fn next(&mut self) -> Result<Option<Box<dyn DMessage>>, TgError> {
-        self.iter
-            .next()
-            .await
-            .map(|x| x.map(|y| Box::new(ProductionDMessage { message: y }) as Box<dyn DMessage>))
-            .map_err(|err| err.into())
-    }
-}
-
-pub struct ProductionDMessage {
-    message: Message,
-}
-
-impl DMessage for ProductionDMessage {
-    fn date(&self) -> DateTime<Utc> {
-        self.message.date()
-    }
-
-    fn id(&self) -> i32 {
-        self.message.id()
-    }
-
-    fn text(&self) -> String {
-        self.message.text().to_string()
-    }
-
-    fn photo(&self) -> Option<Box<dyn DPhoto>> {
-        self.message
-            .photo()
-            .map(|x| Box::new(ProductionDPhoto { photo: x }) as Box<dyn DPhoto>)
-    }
-
-    fn document(&self) -> Option<Box<dyn DDocument>> {
-        self.message
-            .document()
-            .map(|x| Box::new(ProductionDDocument { doc: x }) as Box<dyn DDocument>)
-    }
-
-    fn geo(&self) -> Option<GeoInfo> {
-        let media = self.message.media();
-        if let Some(Media::Geo(geo)) = media {
-            geo.point().map(|it| it.into())
-        } else {
-            None
-        }
-    }
-
-    fn geo_live(&self) -> Option<GeoLiveInfo> {
-        let media = self.message.media();
-        if let Some(Media::GeoLive(geo)) = media {
-            Some(GeoLiveInfo {
-                point: geo.point().map(|it| it.into()),
-                heading: geo.heading(),
-                period: geo.period(),
-                proximity_notification_radius: geo.proximity_notification_radius(),
-            })
-        } else {
-            None
-        }
-    }
-
-    fn contact(&self) -> Option<ContactInfo> {
-        let media = self.message.media();
-        if let Some(Media::Contact(contact)) = media {
-            Some(ContactInfo {
-                first_name: contact.first_name(),
-                last_name: contact.last_name(),
-                phone_number: contact.phone_number(),
-                vcard: contact.vcard(),
-            })
-        } else {
-            None
-        }
-    }
-
-    fn edit_date(&self) -> Option<DateTime<Utc>> {
-        self.message.edit_date()
-    }
-
-    fn mentioned(&self) -> bool {
-        self.message.mentioned()
-    }
-
-    fn outgoing(&self) -> bool {
-        self.message.outgoing()
-    }
-
-    fn pinned(&self) -> bool {
-        self.message.pinned()
-    }
-
-    fn sender_id(&self) -> Option<i32> {
-        self.message.sender().map(|x| x.id())
-    }
-
-    fn sender_name(&self) -> Option<String> {
-        self.message.sender().map(|x| x.name().to_string())
-    }
-
-    fn fwd_from(&self) -> Option<ForwardInfo> {
-        let tl::enums::MessageFwdHeader::Header(data) = self.message.forward_header()?;
-        let date =
-            DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(data.date as i64, 0), Utc);
-        let from_id = if let Some(from_id) = data.from_id {
-            if let tl::enums::Peer::User(user) = from_id {
-                Some(user.user_id)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-        Some(ForwardInfo {
-            from_id,
-            from_name: data.from_name.clone(),
-            date,
-        })
-    }
-
-    fn reply_to(&self) -> Option<ReplyInfo> {
-        self.message
-            .reply_to_message_id()
-            .map(|to_message_id| ReplyInfo { to_message_id })
-    }
-}
-
-pub struct ProductionDPhoto {
-    photo: Photo,
-}
-
-#[async_trait]
-impl DPhoto for ProductionDPhoto {
-    fn id(&self) -> Option<i64> {
-        self.photo.id()
-    }
-
-    fn photo(self: Box<Self>) -> Photo {
-        self.photo
-    }
-
-    async fn load_largest(&self, path: &PathBuf) -> Result<(), io::Error> {
-        self.photo.thumbs().largest().unwrap().download(path).await
-    }
-}
-
-pub struct ProductionDDocument {
-    doc: Document,
-}
-
-#[async_trait]
-impl DDocument for ProductionDDocument {
-    fn id(&self) -> i64 {
-        self.doc.id()
-    }
-
-    fn name(&self) -> String {
-        self.doc.name().to_string()
-    }
-
-    fn is_round_message(&self) -> bool {
-        self.doc.is_round_message()
-    }
-
-    fn is_voice_message(&self) -> bool {
-        self.doc.is_voice_message()
-    }
-
-    async fn download(&mut self, path: &Path) -> Result<(), io::Error> {
-        self.doc.download(path).await
+    async fn next(&mut self) -> Result<Option<Message>, TgError> {
+        self.iter.next().await.map_err(|err| err.into())
     }
 }
 

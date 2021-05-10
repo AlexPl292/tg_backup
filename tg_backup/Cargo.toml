@@ -31,6 +31,11 @@ tg_backup_connector = { path = "../tg_backup_connector" }
 tg_backup_types = { path = "../tg_backup_types" }
 sysinfo = "0.17.2"
 log-panics = "2.0.0"
+grammers-client = { git = "https://github.com/AlexPl292/grammers" }
+grammers-session = { git = "https://github.com/AlexPl292/grammers" }
+grammers-tl-types = { git = "https://github.com/AlexPl292/grammers" }
+grammers-mtsender = { git = "https://github.com/AlexPl292/grammers" }
+grammers-mtproto = { git = "https://github.com/AlexPl292/grammers" }
 
 [dev-dependencies]
 tempdir = "0.3.7"

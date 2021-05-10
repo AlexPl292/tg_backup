@@ -18,15 +18,11 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::io;
-use std::path::{Path, PathBuf};
-
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
 use grammers_client::client::auth::{AuthorizationError, InvocationError};
-use grammers_client::types::{Chat, Photo};
+use grammers_client::types::{Chat, Message};
 
-use tg_backup_types::{ContactInfo, ForwardInfo, GeoInfo, GeoLiveInfo, Member, ReplyInfo};
+use tg_backup_types::Member;
 
 use crate::TgError;
 use std::any::Any;
@@ -56,42 +52,7 @@ pub trait DIter {
 pub trait DMsgIter: Send {
     async fn total(&mut self) -> Result<usize, InvocationError>;
 
-    async fn next(&mut self) -> Result<Option<Box<dyn DMessage>>, TgError>;
-}
-
-pub trait DMessage: Send {
-    fn date(&self) -> DateTime<Utc>;
-    fn id(&self) -> i32;
-    fn text(&self) -> String;
-    fn photo(&self) -> Option<Box<dyn DPhoto>>;
-    fn document(&self) -> Option<Box<dyn DDocument>>;
-    fn geo(&self) -> Option<GeoInfo>;
-    fn geo_live(&self) -> Option<GeoLiveInfo>;
-    fn contact(&self) -> Option<ContactInfo>;
-    fn edit_date(&self) -> Option<DateTime<Utc>>;
-    fn mentioned(&self) -> bool;
-    fn outgoing(&self) -> bool;
-    fn pinned(&self) -> bool;
-    fn sender_id(&self) -> Option<i32>;
-    fn sender_name(&self) -> Option<String>;
-    fn fwd_from(&self) -> Option<ForwardInfo>;
-    fn reply_to(&self) -> Option<ReplyInfo>;
-}
-
-#[async_trait]
-pub trait DPhoto: Send {
-    fn id(&self) -> Option<i64>;
-    fn photo(self: Box<Self>) -> Photo;
-    async fn load_largest(&self, path: &PathBuf) -> Result<(), io::Error>;
-}
-
-#[async_trait]
-pub trait DDocument: Send {
-    fn id(&self) -> i64;
-    fn name(&self) -> String;
-    fn is_round_message(&self) -> bool;
-    fn is_voice_message(&self) -> bool;
-    async fn download(&mut self, path: &Path) -> Result<(), io::Error>;
+    async fn next(&mut self) -> Result<Option<Message>, TgError>;
 }
 
 #[async_trait]
