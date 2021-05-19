@@ -18,10 +18,16 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::types::{ContactInfo, ForwardInfo, GeoInfo, GeoLiveInfo, Member, ReplyInfo};
+use async_trait::async_trait;
 use chrono::{DateTime, NaiveDateTime, Utc};
-use grammers_client::types::{Media, Message};
+use grammers_client::client::auth::InvocationError;
+use grammers_client::types::{Chat, Media, Message};
+use grammers_client::Client;
+use grammers_mtproto::mtp::RpcError;
 use grammers_tl_types as tl;
-use tg_backup_types::{ContactInfo, ForwardInfo, GeoInfo, GeoLiveInfo, ReplyInfo};
+use std::thread::sleep;
+use std::time::Duration;
 
 pub trait MessageExt {
     fn geo(&self) -> Option<GeoInfo>;
@@ -91,5 +97,78 @@ impl MessageExt for Message {
     fn reply_to(&self) -> Option<ReplyInfo> {
         self.reply_to_message_id()
             .map(|to_message_id| ReplyInfo { to_message_id })
+    }
+}
+
+#[async_trait]
+pub trait ChatExt: Send {
+    fn id(&self) -> i32;
+    fn name(&self) -> String;
+    async fn members(&self, client: &Client) -> Vec<Member>;
+    fn visual_id(&self) -> String;
+    fn skip_backup(&self) -> bool;
+}
+
+#[async_trait]
+impl ChatExt for Chat {
+    fn id(&self) -> i32 {
+        self.id()
+    }
+
+    fn name(&self) -> String {
+        self.name().to_string()
+    }
+
+    async fn members(&self, client: &Client) -> Vec<Member> {
+        let mut res = vec![];
+        if let Chat::User(user) = &self {
+            res.push(Member::Me);
+            res.push(user.into());
+        } else {
+            let mut participant_iter = client.iter_participants(&self);
+            loop {
+                let next = participant_iter.next().await;
+                match next {
+                    Ok(Some(next_one)) => {
+                        let member = next_one.user.into();
+                        res.push(member);
+                    }
+                    Ok(None) => break,
+                    Err(InvocationError::Rpc(RpcError {
+                        name,
+                        code: _,
+                        value,
+                    })) => {
+                        if name == "FLOOD_WAIT" {
+                            log::warn!("Flood wait: {}", value.unwrap());
+                            sleep(Duration::from_secs(value.unwrap() as u64))
+                        } else if name == "FILE_MIGRATE" {
+                            log::warn!("File migrate: {}", value.unwrap());
+                        } else {
+                            log::error!("Error {}, {:?}", name, value)
+                        }
+                    }
+                    Err(e) => panic!("{}", e),
+                }
+            }
+        }
+        res
+    }
+
+    fn visual_id(&self) -> String {
+        if let Chat::User(user) = &self {
+            let username = user.username().unwrap_or("NO_USERNAME");
+            format!("{}.{}", &self.name(), username)
+        } else {
+            format!("{}", &self.name())
+        }
+    }
+
+    fn skip_backup(&self) -> bool {
+        match self {
+            Chat::User(_) => false,
+            Chat::Group(_) => false,
+            Chat::Channel(_) => true,
+        }
     }
 }

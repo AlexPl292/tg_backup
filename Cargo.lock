@@ -1053,6 +1053,7 @@ dependencies = [
 name = "tg_backup"
 version = "0.1.10-alpha.0"
 dependencies = [
+ "async-trait",
  "chrono",
  "clap",
  "grammers-client",
@@ -1070,36 +1071,7 @@ dependencies = [
  "simple-logging",
  "sysinfo",
  "tempdir",
- "tg_backup_connector",
- "tg_backup_types",
  "tokio",
-]
-
-[[package]]
-name = "tg_backup_connector"
-version = "0.1.10-alpha.0"
-dependencies = [
- "async-trait",
- "chrono",
- "grammers-client",
- "grammers-mtproto",
- "grammers-mtsender",
- "grammers-session",
- "grammers-tl-types",
- "home",
- "log",
- "shellexpand",
- "tg_backup_types",
- "tokio",
-]
-
-[[package]]
-name = "tg_backup_types"
-version = "0.1.10-alpha.0"
-dependencies = [
- "chrono",
- "grammers-client",
- "serde",
 ]
 
 [[package]]

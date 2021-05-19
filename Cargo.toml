@@ -1,7 +1,40 @@
-[workspace]
+[package]
+name = "tg_backup"
+version = "0.1.10-alpha.0"
+authors = ["Alex Plate <AlexPl292@gmail.com>"]
+edition = "2018"
+license = "Apache-3.0"
+readme = "README.md"
+description = "Backup your messages from the Telegram messenger"
+repository = "https://github.com/AlexPl292/tg_backup"
+publish = false
 
-members = [
-    "tg_backup",
-    "tg_backup_connector",
-    "tg_backup_types",
-]
+[package.metadata.release]
+disable-tag = false
+sign-tag = true
+tag-name = "v{{prev_version}}"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "1.1.0", features = ["fs", "sync", "rt-multi-thread", "macros"]}
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+simple-logging = "2.0.2"
+log = "0.4.8"
+chrono = { version = "0.4.19", features = ["serde"] }
+clap = "3.0.0-beta.2"
+pbr = "1.0.4"
+home = "0.5.3"
+shellexpand = "2.1.0"
+sysinfo = "0.17.2"
+log-panics = "2.0.0"
+grammers-client = { git = "https://github.com/AlexPl292/grammers" }
+grammers-session = { git = "https://github.com/AlexPl292/grammers" }
+grammers-tl-types = { git = "https://github.com/AlexPl292/grammers" }
+grammers-mtsender = { git = "https://github.com/AlexPl292/grammers" }
+grammers-mtproto = { git = "https://github.com/AlexPl292/grammers" }
+async-trait = "0.1.48"
+
+[dev-dependencies]
+tempdir = "0.3.7"

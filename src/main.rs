@@ -18,8 +18,22 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-pub use crate::errors::TgError;
+use crate::backup::start_backup;
+use crate::opts::Opts;
+use clap::Clap;
 
-mod errors;
-pub mod production;
-pub mod traits;
+mod attachment_type;
+mod backup;
+mod context;
+mod ext;
+mod in_progress;
+mod logs;
+mod opts;
+mod types;
+
+#[tokio::main]
+async fn main() {
+    let opts: Opts = Opts::parse();
+
+    start_backup(opts).await;
+}
