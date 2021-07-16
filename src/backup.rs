@@ -714,6 +714,7 @@ async fn extract_dialog(
                 code: _,
                 name,
                 value,
+                ..
             })) => {
                 if name == "FLOOD_WAIT" {
                     let wait_time = value.unwrap();

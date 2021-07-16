@@ -65,10 +65,10 @@ impl MessageExt for Message {
         let media = self.media();
         if let Some(Media::Contact(contact)) = media {
             Some(ContactInfo {
-                first_name: contact.first_name(),
-                last_name: contact.last_name(),
-                phone_number: contact.phone_number(),
-                vcard: contact.vcard(),
+                first_name: contact.first_name().to_string(),
+                last_name: contact.last_name().to_string(),
+                phone_number: contact.phone_number().to_string(),
+                vcard: contact.vcard().to_string(),
             })
         } else {
             None
@@ -138,6 +138,7 @@ impl ChatExt for Chat {
                         name,
                         code: _,
                         value,
+                        ..
                     })) => {
                         if name == "FLOOD_WAIT" {
                             log::warn!("Flood wait: {}", value.unwrap());
