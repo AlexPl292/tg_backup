@@ -26,6 +26,7 @@ use crate::attachment_type::AttachmentType;
 use crate::types::MessageInfo;
 use chrono::{DateTime, Utc};
 use pbr::ProgressBar;
+use std::fs;
 use std::io::Stdout;
 
 pub const MESSAGES: &'static str = "messages";
@@ -80,20 +81,23 @@ pub struct ChatContext {
 
     pub(crate) file_issue: i64,
     pub(crate) file_issue_count: i32,
+
+    pub(crate) initial_file: Option<PathBuf>,
 }
 
 impl ChatContext {
-    pub fn init(path: &Path, visual_id: String) -> ChatContext {
+    pub fn init(path: &Path, visual_id: String, initial_acc: Vec<MessageInfo>) -> ChatContext {
         let mut types = ChatContext::init_types();
         types.values_mut().for_each(|x| x.init_folder(path));
         ChatContext {
             types,
-            messages_accumulator: vec![],
-            accumulator_counter: 0,
+            accumulator_counter: initial_acc.len() as i32,
+            messages_accumulator: initial_acc,
             pb: None,
             visual_id,
             file_issue: 0,
             file_issue_count: 0,
+            initial_file: None,
         }
     }
 
@@ -135,8 +139,18 @@ impl ChatContext {
             return;
         }
 
+        // XXX: We remove the old file before creating the new one.
+        // This is made to avoid incrementing of the counter in the file name if the file name remains
+        // But this main lead to lost data if the program fails if the old file is removed, but
+        // the new file is not yet written.
+        if let Some(initial_file) = &self.initial_file {
+            let _ = fs::remove_file(initial_file);
+            self.initial_file = None;
+        }
+
         let data_type = self.types.get(MESSAGES).unwrap();
         let messages_path = data_type.path();
+        self.messages_accumulator.sort_by_key(|x| x.date);
         let first_msg = self
             .messages_accumulator
             .first()

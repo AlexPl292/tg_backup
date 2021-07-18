@@ -18,7 +18,7 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::fs::File;
+use std::fs::{DirEntry, File};
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
@@ -37,7 +37,8 @@ use crate::logs::init_logs;
 use crate::opts::{Opts, SubCommand};
 use crate::types::Attachment::PhotoExpired;
 use crate::types::{
-    chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo, Member,
+    chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo,
+    Member, MessageInfo,
 };
 use grammers_client::types::photo_sizes::VecExt;
 use grammers_client::types::{Dialog, Message};
@@ -533,7 +534,22 @@ async fn extract_dialog(
 
     let info_file_path = chat_path.join("info.json");
 
-    let mut chat_ctx = ChatContext::init(chat_path, visual_id.clone());
+    let latest_file = get_last_file(chat_path);
+    let existing_data: Vec<MessageInfo> = if let Some(entry) = &latest_file {
+        let file = BufReader::new(File::open(&entry.path()).unwrap());
+        let existing_data: Vec<MessageInfo> = serde_json::from_reader(file).unwrap();
+        if existing_data.len() as i32 >= main_ctx.batch_size {
+            vec![]
+        } else {
+            existing_data
+        }
+    } else {
+        vec![]
+    };
+
+    let mut chat_ctx = ChatContext::init(chat_path, visual_id.clone(), existing_data);
+    chat_ctx.initial_file = latest_file.map(|x| x.path());
+
     let mut start_loading_time = main_ctx.date.clone();
     let mut end_loading_time: Option<DateTime<Utc>> = None;
     let mut last_loaded_id: Option<i32> = None;
@@ -760,6 +776,38 @@ async fn extract_dialog(
     //     pb.finish();
     // }
     Ok(())
+}
+
+fn get_last_file(chat_path: &Path) -> Option<DirEntry> {
+    let messages_path = chat_path.join("messages");
+    if !messages_path.exists() {
+        return None;
+    }
+    let latest_dir = fs::read_dir(messages_path)
+        .unwrap()
+        .max_by(|left, right| {
+            left.as_ref()
+                .map_or(0u64, |dir| {
+                    dir.metadata()
+                        .unwrap()
+                        .modified()
+                        .unwrap()
+                        .elapsed()
+                        .unwrap()
+                        .as_secs()
+                })
+                .cmp(&right.as_ref().map_or(0u64, |dir| {
+                    dir.metadata()
+                        .unwrap()
+                        .modified()
+                        .unwrap()
+                        .elapsed()
+                        .unwrap()
+                        .as_secs()
+                }))
+        })?
+        .unwrap();
+    Some(latest_dir)
 }
 
 async fn save_message(message: &Message, chat_ctx: &mut ChatContext) -> Result<(), ()> {
