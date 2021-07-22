@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Support contact attachment
 
+### Changed
+- Backup reuses last file with messages instead of the creating the new one
+
 ## [0.1.9] - 2021-05-10
 ### Added
 - Support geo location
