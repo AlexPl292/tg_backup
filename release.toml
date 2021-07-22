@@ -1,6 +1,4 @@
 # https://github.com/sunng87/cargo-release
 
 sign-commit = true
-
-# Reenable in main crait
-disable-tag = true
+sign-tag = true

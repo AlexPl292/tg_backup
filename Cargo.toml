@@ -9,11 +9,6 @@ description = "Backup your messages from the Telegram messenger"
 repository = "https://github.com/AlexPl292/tg_backup"
 publish = false
 
-[package.metadata.release]
-disable-tag = false
-sign-tag = true
-tag-name = "v{{prev_version}}"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
