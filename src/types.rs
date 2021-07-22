@@ -135,7 +135,7 @@ impl BackUpInfo {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Eq, PartialEq)]
 #[serde(tag = "type")]
 pub enum Member {
     Me,

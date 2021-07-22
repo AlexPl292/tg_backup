@@ -621,8 +621,17 @@ async fn extract_dialog(
     let members_folder = chat_path.join("members");
     let _ = fs::create_dir(&members_folder);
     let members_path = members_folder.join("members.json");
-    let members_file = File::create(members_path).unwrap();
-    serde_json::to_writer_pretty(&members_file, &members).unwrap();
+    if !members_path.exists() {
+        let members_file = File::create(members_path).unwrap();
+        serde_json::to_writer_pretty(&members_file, &members).unwrap();
+    } else {
+        let file = BufReader::new(File::open(&members_path).unwrap());
+        let existing_data: Vec<Member> = serde_json::from_reader(file).unwrap();
+        if existing_data != members {
+            let members_file = File::create(members_path).unwrap();
+            serde_json::to_writer_pretty(&members_file, &members).unwrap();
+        }
+    }
 
     // Initialize progress bar
     let mut pb = ProgressBar::new(amount_of_messages_to_load as u64);

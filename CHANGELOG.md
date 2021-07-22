@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Backup reuses last file with messages instead of the creating the new one
+- Do not recreate members.json every time
 
 ## [0.1.9] - 2021-05-10
 ### Added
