@@ -84,6 +84,7 @@ pub async fn start_backup(opts: Opts) {
         if !opts.quiet {
             println!("An instance of tg_backup already running");
         }
+        log::info!("An instance of tg_backup already running. Stop following execution.");
         return;
     }
 
