@@ -37,8 +37,8 @@ use crate::logs::init_logs;
 use crate::opts::{Opts, SubCommand};
 use crate::types::Attachment::PhotoExpired;
 use crate::types::{
-    chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo,
-    Member, MessageInfo,
+    chat_to_info, msg_to_file_info, msg_to_info, Action, Attachment, BackUpInfo, ChatInfo,
+    FileInfo, Member, MessageInfo, PhoneCallDiscardReason,
 };
 use grammers_client::types::photo_sizes::VecExt;
 use grammers_client::types::{Dialog, Message};
@@ -46,6 +46,7 @@ use grammers_client::{Client, Config, SignInError};
 use grammers_mtproto::mtp::RpcError;
 use grammers_mtsender::{AuthorizationError, InvocationError};
 use grammers_session::Session;
+use grammers_tl_types as tl;
 use serde_json::Error;
 use std::collections::HashSet;
 use sysinfo::{AsU32, Pid, System, SystemExt};
@@ -980,13 +981,49 @@ async fn save_message(message: &Message, chat_ctx: &mut ChatContext) -> Result<(
         None
     };
 
+    let action = get_action(message);
     if let Some(attachment) = res {
-        let message_info = msg_to_file_info(&message, attachment);
+        let message_info = msg_to_file_info(&message, attachment, action);
         chat_ctx.messages_accumulator.push(message_info);
         Ok(())
     } else {
         log::debug!("Loading message {}", message_text);
-        chat_ctx.messages_accumulator.push(msg_to_info(&message));
+        chat_ctx
+            .messages_accumulator
+            .push(msg_to_info(&message, action));
         Ok(())
+    }
+}
+fn get_action(message: &Message) -> Option<Action> {
+    let action: &tl::enums::MessageAction = message.action()?;
+    match action {
+        tl::enums::MessageAction::PhoneCall(tl::types::MessageActionPhoneCall {
+            video,
+            call_id,
+            reason,
+            duration,
+        }) => {
+            let reason = reason.as_ref().map(|it| match it {
+                tl::enums::PhoneCallDiscardReason::Missed => {
+                    PhoneCallDiscardReason::PhoneCallDiscardReasonMissed
+                }
+                tl::enums::PhoneCallDiscardReason::Disconnect => {
+                    PhoneCallDiscardReason::PhoneCallDiscardReasonDisconnect
+                }
+                tl::enums::PhoneCallDiscardReason::Hangup => {
+                    PhoneCallDiscardReason::PhoneCallDiscardReasonHangup
+                }
+                tl::enums::PhoneCallDiscardReason::Busy => {
+                    PhoneCallDiscardReason::PhoneCallDiscardReasonBusy
+                }
+            });
+            Some(Action::PhoneCall {
+                is_video: *video,
+                call_id: *call_id,
+                reason,
+                duration: duration.unwrap_or(-1),
+            })
+        }
+        _ => Some(Action::UnsupportedByTgBackup),
     }
 }

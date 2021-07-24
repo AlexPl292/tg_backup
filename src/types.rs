@@ -47,6 +47,7 @@ pub struct MessageInfo {
     sender_name: Option<String>,
     forwarded_from: Option<ForwardInfo>,
     reply_to: Option<ReplyInfo>,
+    action: Option<Action>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -68,7 +69,26 @@ pub enum Attachment {
     Error(String),
 }
 
-pub fn msg_to_info(data: &Message) -> MessageInfo {
+#[derive(Serialize, Deserialize)]
+pub enum Action {
+    PhoneCall {
+        is_video: bool,
+        call_id: i64,
+        reason: Option<PhoneCallDiscardReason>,
+        duration: i32,
+    },
+    UnsupportedByTgBackup,
+}
+
+#[derive(Serialize, Deserialize)]
+pub enum PhoneCallDiscardReason {
+    PhoneCallDiscardReasonMissed,
+    PhoneCallDiscardReasonDisconnect,
+    PhoneCallDiscardReasonHangup,
+    PhoneCallDiscardReasonBusy,
+}
+
+pub fn msg_to_info(data: &Message, action: Option<Action>) -> MessageInfo {
     MessageInfo {
         text: data.text().to_string(),
         id: data.id(),
@@ -82,10 +102,15 @@ pub fn msg_to_info(data: &Message) -> MessageInfo {
         sender_name: data.sender().map(|x| x.name().to_string()),
         forwarded_from: data.fwd_from(),
         reply_to: data.reply_to(),
+        action,
     }
 }
 
-pub fn msg_to_file_info(data: &Message, attachment: Attachment) -> MessageInfo {
+pub fn msg_to_file_info(
+    data: &Message,
+    attachment: Attachment,
+    action: Option<Action>,
+) -> MessageInfo {
     MessageInfo {
         text: data.text().to_string(),
         id: data.id(),
@@ -99,6 +124,7 @@ pub fn msg_to_file_info(data: &Message, attachment: Attachment) -> MessageInfo {
         sender_name: data.sender().map(|x| x.name().to_string()),
         forwarded_from: data.fwd_from(),
         reply_to: data.reply_to(),
+        action,
     }
 }
 
