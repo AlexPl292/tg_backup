@@ -1035,7 +1035,9 @@ fn get_action(message: &Message) -> Option<Action> {
         }) => Action::ChatEditTitle {
             new_title: title.to_string(),
         },
-        _ => Action::UnsupportedByTgBackup,
+        _ => {
+            Action::UnsupportedByTgBackup(format!("{:?}", action))
+        },
     };
     Some(result)
 }

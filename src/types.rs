@@ -83,7 +83,7 @@ pub enum Action {
     ChatEditTitle {
         new_title: String,
     },
-    UnsupportedByTgBackup,
+    UnsupportedByTgBackup(String),
 }
 
 #[derive(Serialize, Deserialize)]
