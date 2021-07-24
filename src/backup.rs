@@ -46,9 +46,9 @@ use grammers_client::{Client, Config, SignInError};
 use grammers_mtproto::mtp::RpcError;
 use grammers_mtsender::{AuthorizationError, InvocationError};
 use grammers_session::Session;
+use serde_json::Error;
 use std::collections::HashSet;
 use sysinfo::{AsU32, Pid, System, SystemExt};
-use serde_json::Error;
 
 const PATH: &'static str = "backup";
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
@@ -558,7 +558,11 @@ async fn extract_dialog(
                 }
             }
             Err(err) => {
-                log::error!("Cannot parse previous data from {:?}, error {}", entry.path(), err);
+                log::error!(
+                    "Cannot parse previous data from {:?}, error {}",
+                    entry.path(),
+                    err
+                );
                 vec![]
             }
         }
