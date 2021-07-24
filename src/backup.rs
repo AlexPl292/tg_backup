@@ -996,7 +996,7 @@ async fn save_message(message: &Message, chat_ctx: &mut ChatContext) -> Result<(
 }
 fn get_action(message: &Message) -> Option<Action> {
     let action: &tl::enums::MessageAction = message.action()?;
-    match action {
+    let result = match action {
         tl::enums::MessageAction::PhoneCall(tl::types::MessageActionPhoneCall {
             video,
             call_id,
@@ -1017,13 +1017,25 @@ fn get_action(message: &Message) -> Option<Action> {
                     PhoneCallDiscardReason::PhoneCallDiscardReasonBusy
                 }
             });
-            Some(Action::PhoneCall {
+            Action::PhoneCall {
                 is_video: *video,
                 call_id: *call_id,
                 reason,
                 duration: duration.unwrap_or(-1),
-            })
+            }
         }
-        _ => Some(Action::UnsupportedByTgBackup),
-    }
+        tl::enums::MessageAction::ChatCreate(tl::types::MessageActionChatCreate {
+            title, ..
+        }) => Action::ChatCreate {
+            title: title.to_string(),
+        },
+        tl::enums::MessageAction::ChatEditTitle(tl::types::MessageActionChatEditTitle {
+            title,
+            ..
+        }) => Action::ChatEditTitle {
+            newTitle: title.to_string(),
+        },
+        _ => Action::UnsupportedByTgBackup,
+    };
+    Some(result)
 }

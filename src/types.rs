@@ -77,6 +77,12 @@ pub enum Action {
         reason: Option<PhoneCallDiscardReason>,
         duration: i32,
     },
+    ChatCreate {
+        title: String,
+    },
+    ChatEditTitle {
+        newTitle: String,
+    },
     UnsupportedByTgBackup,
 }
 
