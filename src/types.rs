@@ -81,7 +81,7 @@ pub enum Action {
         title: String,
     },
     ChatEditTitle {
-        newTitle: String,
+        new_title: String,
     },
     UnsupportedByTgBackup,
 }
