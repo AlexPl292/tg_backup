@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Support contact attachment
 
+### Fixed
+- Fix previous file parsing if writing to the old file
+
 ### Changed
 - Backup reuses last file with messages instead of the creating the new one
 - Do not recreate members.json every time

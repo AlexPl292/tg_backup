@@ -48,6 +48,7 @@ use grammers_mtsender::{AuthorizationError, InvocationError};
 use grammers_session::Session;
 use std::collections::HashSet;
 use sysinfo::{AsU32, Pid, System, SystemExt};
+use serde_json::Error;
 
 const PATH: &'static str = "backup";
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
@@ -547,11 +548,19 @@ async fn extract_dialog(
     let latest_file = get_last_file(chat_path);
     let existing_data: Vec<MessageInfo> = if let Some(entry) = &latest_file {
         let file = BufReader::new(File::open(&entry.path()).unwrap());
-        let existing_data: Vec<MessageInfo> = serde_json::from_reader(file).unwrap();
-        if existing_data.len() as i32 >= main_ctx.batch_size {
-            vec![]
-        } else {
-            existing_data
+        let result: Result<Vec<MessageInfo>, Error> = serde_json::from_reader(file);
+        match result {
+            Ok(existing_data) => {
+                if existing_data.len() as i32 >= main_ctx.batch_size {
+                    vec![]
+                } else {
+                    existing_data
+                }
+            }
+            Err(err) => {
+                log::error!("Cannot parse previous data from {:?}, error {}", entry.path(), err);
+                vec![]
+            }
         }
     } else {
         vec![]
