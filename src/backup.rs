@@ -390,8 +390,17 @@ async fn save_me(client: &mut Client, main_context: &MainContext) {
         Ok(me) => {
             let path_string = format!("{}/me.json", main_context.output_dir.display().to_string());
             let path = Path::new(path_string.as_str());
-            let file = File::create(path).unwrap();
-            serde_json::to_writer_pretty(&file, &me).unwrap();
+            if !path.exists() {
+                let file = File::create(path).unwrap();
+                serde_json::to_writer_pretty(&file, &me).unwrap();
+            } else {
+                let file = BufReader::new(File::open(&path).unwrap());
+                let existing_data: Member = serde_json::from_reader(file).unwrap();
+                if existing_data != me {
+                    let members_file = File::create(path).unwrap();
+                    serde_json::to_writer_pretty(&members_file, &me).unwrap();
+                }
+            }
         }
         Err(e) => {
             log::error!("Cannot save information about me: {}", e)
