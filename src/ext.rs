@@ -121,11 +121,11 @@ impl ChatExt for Chat {
 
     async fn members(&self, client: &Client) -> Vec<Member> {
         let mut res = vec![];
-        if let Chat::User(user) = &self {
+        if let Chat::User(user) = self {
             res.push(Member::Me);
             res.push(user.into());
         } else {
-            let mut participant_iter = client.iter_participants(&self);
+            let mut participant_iter = client.iter_participants(self);
             loop {
                 let next = participant_iter.next().await;
                 match next {
