@@ -39,8 +39,8 @@ pub trait MessageExt {
 
 impl MessageExt for Message {
     fn geo(&self) -> Option<GeoInfo> {
-        let media = self.media();
-        if let Some(Media::Geo(geo)) = media {
+        let media = self.media()?;
+        if let Media::Geo(geo) = media {
             geo.point().map(|it| it.into())
         } else {
             None
@@ -48,8 +48,8 @@ impl MessageExt for Message {
     }
 
     fn geo_live(&self) -> Option<GeoLiveInfo> {
-        let media = self.media();
-        if let Some(Media::GeoLive(geo)) = media {
+        let media = self.media()?;
+        if let Media::GeoLive(geo) = media {
             Some(GeoLiveInfo {
                 point: geo.point().map(|it| it.into()),
                 heading: geo.heading(),
@@ -62,8 +62,8 @@ impl MessageExt for Message {
     }
 
     fn contact(&self) -> Option<ContactInfo> {
-        let media = self.media();
-        if let Some(Media::Contact(contact)) = media {
+        let media = self.media()?;
+        if let Media::Contact(contact) = media {
             Some(ContactInfo {
                 first_name: contact.first_name().to_string(),
                 last_name: contact.last_name().to_string(),
