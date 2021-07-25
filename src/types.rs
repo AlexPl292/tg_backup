@@ -78,34 +78,16 @@ pub enum PhoneCallDiscardReason {
     PhoneCallDiscardReasonBusy,
 }
 
-pub fn msg_to_info(data: &Message, action: Option<Action>) -> MessageInfo {
-    MessageInfo {
-        text: data.text().to_string(),
-        id: data.id(),
-        date: data.date(),
-        attachment: None,
-        edit_date: data.edit_date(),
-        mentioned: data.mentioned(),
-        outgoing: data.outgoing(),
-        pinned: data.pinned(),
-        sender_id: data.sender().map(|x| x.id()),
-        sender_name: data.sender().map(|x| x.name().to_string()),
-        forwarded_from: data.fwd_from(),
-        reply_to: data.reply_to(),
-        action,
-    }
-}
-
-pub fn msg_to_file_info(
+pub fn msg_to_info(
     data: &Message,
-    attachment: Attachment,
+    attachment: Option<Attachment>,
     action: Option<Action>,
 ) -> MessageInfo {
     MessageInfo {
         text: data.text().to_string(),
         id: data.id(),
         date: data.date(),
-        attachment: Some(attachment),
+        attachment,
         edit_date: data.edit_date(),
         mentioned: data.mentioned(),
         outgoing: data.outgoing(),

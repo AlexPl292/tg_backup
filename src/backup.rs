@@ -38,8 +38,7 @@ use crate::logs::init_logs;
 use crate::opts::{Opts, SubCommand};
 use crate::types::Attachment::PhotoExpired;
 use crate::types::{
-    chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo,
-    Member, MessageInfo,
+    chat_to_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo, Member, MessageInfo,
 };
 use grammers_client::types::photo_sizes::VecExt;
 use grammers_client::types::{Dialog, Message};
@@ -852,7 +851,7 @@ async fn save_message(message: &Message, chat_ctx: &mut ChatContext) -> Result<(
     let option_geo = message.geo();
     let option_geo_live = message.geo_live();
     let option_contact = message.contact();
-    let res = if let Some(photo) = option_photo {
+    let attachment = if let Some(photo) = option_photo {
         if let Some(pb) = chat_ctx.pb.as_mut() {
             pb.message(format!("Loading {} [photo   ] ", chat_ctx.visual_id.as_str()).as_str());
         }
@@ -983,18 +982,12 @@ async fn save_message(message: &Message, chat_ctx: &mut ChatContext) -> Result<(
     };
 
     let action = get_action(message);
-    if let Some(attachment) = res {
-        let message_info = msg_to_file_info(&message, attachment, action);
-        chat_ctx.messages_accumulator.push(message_info);
-        Ok(())
-    } else {
-        log::debug!("Loading message {}", message_text);
-        chat_ctx
-            .messages_accumulator
-            .push(msg_to_info(&message, action));
-        Ok(())
-    }
+    log::debug!("Loading message {}", message_text);
+    let message = msg_to_info(&message, attachment, action);
+    chat_ctx.messages_accumulator.push(message);
+    Ok(())
 }
+
 fn get_action(message: &Message) -> Option<Action> {
     let action: &tl::enums::MessageAction = message.action()?;
     let result = match action {
