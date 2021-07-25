@@ -17,8 +17,37 @@
  * You should have received a copy of the GNU General Public License
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
-use crate::types::{Action, Member, PhoneCallDiscardReason};
 use grammers_tl_types as tl;
+
+use crate::types::{Member, PhoneCallDiscardReason};
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize)]
+pub enum Action {
+    PhoneCall {
+        is_video: bool,
+        call_id: i64,
+        reason: Option<PhoneCallDiscardReason>,
+        duration: i32,
+    },
+    ChatCreate {
+        title: String,
+    },
+    ChatEditTitle {
+        new_title: String,
+    },
+    GroupCall {
+        duration: Option<i32>,
+        id: i64,
+        access_hash: i64,
+    },
+    InviteToGroupCall {
+        id: i64,
+        access_hash: i64,
+        invites: Vec<Member>,
+    },
+    UnsupportedByTgBackup(String),
+}
 
 impl From<&tl::types::MessageActionPhoneCall> for Action {
     fn from(data: &tl::types::MessageActionPhoneCall) -> Self {

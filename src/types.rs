@@ -21,6 +21,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use crate::actions::Action;
 use crate::ext::MessageExt;
 use grammers_client::types::media::GeoPoint;
 use grammers_client::types::{Chat, Message, User};
@@ -67,33 +68,6 @@ pub enum Attachment {
     Contact(ContactInfo),
     PhotoExpired,
     Error(String),
-}
-
-#[derive(Serialize, Deserialize)]
-pub enum Action {
-    PhoneCall {
-        is_video: bool,
-        call_id: i64,
-        reason: Option<PhoneCallDiscardReason>,
-        duration: i32,
-    },
-    ChatCreate {
-        title: String,
-    },
-    ChatEditTitle {
-        new_title: String,
-    },
-    GroupCall {
-        duration: Option<i32>,
-        id: i64,
-        access_hash: i64,
-    },
-    InviteToGroupCall {
-        id: i64,
-        access_hash: i64,
-        invites: Vec<Member>,
-    },
-    UnsupportedByTgBackup(String),
 }
 
 #[derive(Serialize, Deserialize)]

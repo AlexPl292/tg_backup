@@ -30,6 +30,7 @@ use pbr::ProgressBar;
 use tokio::task;
 use tokio::time::Duration;
 
+use crate::actions::Action;
 use crate::context::{ChatContext, MainContext, MainMutContext, FILE, PHOTO, ROUND, VOICE};
 use crate::ext::{ChatExt, MessageExt};
 use crate::in_progress::{InProgress, InProgressInfo};
@@ -37,8 +38,8 @@ use crate::logs::init_logs;
 use crate::opts::{Opts, SubCommand};
 use crate::types::Attachment::PhotoExpired;
 use crate::types::{
-    chat_to_info, msg_to_file_info, msg_to_info, Action, Attachment, BackUpInfo, ChatInfo,
-    FileInfo, Member, MessageInfo,
+    chat_to_info, msg_to_file_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo,
+    Member, MessageInfo,
 };
 use grammers_client::types::photo_sizes::VecExt;
 use grammers_client::types::{Dialog, Message};

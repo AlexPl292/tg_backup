@@ -22,7 +22,7 @@ use crate::backup::start_backup;
 use crate::opts::Opts;
 use clap::Clap;
 
-mod action_converters;
+mod actions;
 mod attachment_type;
 mod backup;
 mod context;
