@@ -1035,9 +1035,33 @@ fn get_action(message: &Message) -> Option<Action> {
         }) => Action::ChatEditTitle {
             new_title: title.to_string(),
         },
-        _ => {
-            Action::UnsupportedByTgBackup(format!("{:?}", action))
-        },
+        tl::enums::MessageAction::GroupCall(tl::types::MessageActionGroupCall {
+            call,
+            duration,
+        }) => {
+            let tl::enums::InputGroupCall::Call(data) = call;
+            Action::GroupCall {
+                duration: *duration,
+                id: data.id,
+                access_hash: data.access_hash,
+            }
+        }
+        tl::enums::MessageAction::InviteToGroupCall(
+            tl::types::MessageActionInviteToGroupCall { call, users },
+        ) => {
+            let tl::enums::InputGroupCall::Call(data) = call;
+            let mut invites = vec![];
+            for user in users {
+                // TODO convert to member
+                invites.push(Member::IdOnly { id: *user })
+            }
+            Action::InviteToGroupCall {
+                id: data.id,
+                access_hash: data.access_hash,
+                invites,
+            }
+        }
+        _ => Action::UnsupportedByTgBackup(format!("{:?}", action)),
     };
     Some(result)
 }

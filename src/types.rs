@@ -83,6 +83,16 @@ pub enum Action {
     ChatEditTitle {
         new_title: String,
     },
+    GroupCall {
+        duration: Option<i32>,
+        id: i64,
+        access_hash: i64,
+    },
+    InviteToGroupCall {
+        id: i64,
+        access_hash: i64,
+        invites: Vec<Member>,
+    },
     UnsupportedByTgBackup(String),
 }
 
@@ -180,6 +190,9 @@ pub enum Member {
         contact: bool,
         mutual_contact: bool,
         deleted: bool,
+    },
+    IdOnly {
+        id: i32,
     },
 }
 
