@@ -18,6 +18,7 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+mod action_converters;
 mod attachment_type;
 pub mod backup;
 mod context;

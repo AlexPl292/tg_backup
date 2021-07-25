@@ -38,7 +38,7 @@ use crate::opts::{Opts, SubCommand};
 use crate::types::Attachment::PhotoExpired;
 use crate::types::{
     chat_to_info, msg_to_file_info, msg_to_info, Action, Attachment, BackUpInfo, ChatInfo,
-    FileInfo, Member, MessageInfo, PhoneCallDiscardReason,
+    FileInfo, Member, MessageInfo,
 };
 use grammers_client::types::photo_sizes::VecExt;
 use grammers_client::types::{Dialog, Message};
@@ -997,69 +997,12 @@ async fn save_message(message: &Message, chat_ctx: &mut ChatContext) -> Result<(
 fn get_action(message: &Message) -> Option<Action> {
     let action: &tl::enums::MessageAction = message.action()?;
     let result = match action {
-        tl::enums::MessageAction::PhoneCall(tl::types::MessageActionPhoneCall {
-            video,
-            call_id,
-            reason,
-            duration,
-        }) => {
-            let reason = reason.as_ref().map(|it| match it {
-                tl::enums::PhoneCallDiscardReason::Missed => {
-                    PhoneCallDiscardReason::PhoneCallDiscardReasonMissed
-                }
-                tl::enums::PhoneCallDiscardReason::Disconnect => {
-                    PhoneCallDiscardReason::PhoneCallDiscardReasonDisconnect
-                }
-                tl::enums::PhoneCallDiscardReason::Hangup => {
-                    PhoneCallDiscardReason::PhoneCallDiscardReasonHangup
-                }
-                tl::enums::PhoneCallDiscardReason::Busy => {
-                    PhoneCallDiscardReason::PhoneCallDiscardReasonBusy
-                }
-            });
-            Action::PhoneCall {
-                is_video: *video,
-                call_id: *call_id,
-                reason,
-                duration: duration.unwrap_or(-1),
-            }
-        }
-        tl::enums::MessageAction::ChatCreate(tl::types::MessageActionChatCreate {
-            title, ..
-        }) => Action::ChatCreate {
-            title: title.to_string(),
-        },
-        tl::enums::MessageAction::ChatEditTitle(tl::types::MessageActionChatEditTitle {
-            title,
-            ..
-        }) => Action::ChatEditTitle {
-            new_title: title.to_string(),
-        },
-        tl::enums::MessageAction::GroupCall(tl::types::MessageActionGroupCall {
-            call,
-            duration,
-        }) => {
-            let tl::enums::InputGroupCall::Call(data) = call;
-            Action::GroupCall {
-                duration: *duration,
-                id: data.id,
-                access_hash: data.access_hash,
-            }
-        }
-        tl::enums::MessageAction::InviteToGroupCall(
-            tl::types::MessageActionInviteToGroupCall { call, users },
-        ) => {
-            let tl::enums::InputGroupCall::Call(data) = call;
-            let mut invites = vec![];
-            for user in users {
-                // TODO convert to member
-                invites.push(Member::IdOnly { id: *user })
-            }
-            Action::InviteToGroupCall {
-                id: data.id,
-                access_hash: data.access_hash,
-                invites,
-            }
+        tl::enums::MessageAction::PhoneCall(call) => call.into(),
+        tl::enums::MessageAction::ChatCreate(chat_create) => chat_create.into(),
+        tl::enums::MessageAction::ChatEditTitle(edit_title) => edit_title.into(),
+        tl::enums::MessageAction::GroupCall(group_call) => group_call.into(),
+        tl::enums::MessageAction::InviteToGroupCall(invite_to_group_call) => {
+            invite_to_group_call.into()
         }
         _ => Action::UnsupportedByTgBackup(format!("{:?}", action)),
     };
