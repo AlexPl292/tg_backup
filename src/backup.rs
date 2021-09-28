@@ -18,6 +18,8 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use regex::Regex;
+use std::cmp::Ordering;
 use std::fs::{DirEntry, File};
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
@@ -819,28 +821,48 @@ fn get_last_file(chat_path: &Path) -> Option<DirEntry> {
     let latest_dir = fs::read_dir(messages_path)
         .unwrap()
         .max_by(|left, right| {
-            left.as_ref()
-                .map_or(0u64, |dir| {
-                    dir.metadata()
-                        .unwrap()
-                        .modified()
-                        .unwrap()
-                        .elapsed()
-                        .unwrap()
-                        .as_secs()
-                })
-                .cmp(&right.as_ref().map_or(0u64, |dir| {
-                    dir.metadata()
-                        .unwrap()
-                        .modified()
-                        .unwrap()
-                        .elapsed()
-                        .unwrap()
-                        .as_secs()
-                }))
+            compare_by_names(
+                left.as_ref()
+                    .map_or("", |dir| dir.file_name().to_str().unwrap()),
+                right
+                    .as_ref()
+                    .map_or("", |dir| dir.file_name().to_str().unwrap()),
+            )
         })?
         .unwrap();
     Some(latest_dir)
+}
+
+fn compare_by_names(first_name: &str, second_name: &str) -> Ordering {
+    let regex = Regex::new(r"data-\d{8}-(\d{8})(-(\d+))?\.json").expect("Incorrect regex");
+    let first_date: i32 = regex
+        .captures(first_name)
+        .unwrap()
+        .get(1)
+        .map(|x| x.as_str().parse().unwrap())
+        .unwrap();
+    let second_date: i32 = regex
+        .captures(second_name)
+        .unwrap()
+        .get(1)
+        .map(|x| x.as_str().parse().unwrap())
+        .unwrap();
+    let cmd_result = first_date.cmp(&second_date);
+    if cmd_result == Ordering::Equal {
+        let first_shift: i32 = regex
+            .captures(first_name)
+            .unwrap()
+            .get(3)
+            .map_or(0, |x| x.as_str().parse().unwrap());
+        let second_shift: i32 = regex
+            .captures(second_name)
+            .unwrap()
+            .get(3)
+            .map_or(0, |x| x.as_str().parse().unwrap());
+        first_shift.cmp(&second_shift)
+    } else {
+        cmd_result
+    }
 }
 
 async fn save_message(message: &Message, chat_ctx: &mut ChatContext) -> Result<(), ()> {
@@ -1001,4 +1023,62 @@ fn get_action(message: &Message) -> Option<Action> {
         _ => Action::UnsupportedByTgBackup(format!("{:?}", action)),
     };
     Some(result)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_less() {
+        let ordering =
+            compare_by_names("data-20200101-20200101.json", "data-20200101-20200102.json");
+        assert_eq!(Ordering::Less, ordering)
+    }
+
+    #[test]
+    fn test_greater() {
+        let ordering =
+            compare_by_names("data-20200101-20200102.json", "data-20200101-20200101.json");
+        assert_eq!(Ordering::Greater, ordering)
+    }
+
+    #[test]
+    fn test_eq() {
+        let ordering =
+            compare_by_names("data-20200101-20200101.json", "data-20200101-20200101.json");
+        assert_eq!(Ordering::Equal, ordering)
+    }
+
+    #[test]
+    fn test_eq_with_adding() {
+        let ordering = compare_by_names(
+            "data-20200101-20200101.json",
+            "data-20200101-20200101-1.json",
+        );
+        assert_eq!(Ordering::Less, ordering)
+    }
+
+    #[test]
+    fn test_eq_with_adding_for_both() {
+        let ordering = compare_by_names(
+            "data-20200101-20200101-1.json",
+            "data-20200101-20200101-2.json",
+        );
+        assert_eq!(Ordering::Less, ordering)
+    }
+
+    #[test]
+    fn find_mat() {
+        let files = vec![
+            "data-20200101-20200101-1.json",
+            "data-20200101-20200101-2.json",
+            "data-20200101-20200102.json",
+        ];
+        let max = files
+            .iter()
+            .max_by(|left, right| compare_by_names(left, right))
+            .unwrap();
+        assert_eq!("data-20200101-20200102.json", *max)
+    }
 }

@@ -30,6 +30,7 @@ grammers-tl-types = { git = "https://github.com/AlexPl292/grammers" }
 grammers-mtsender = { git = "https://github.com/AlexPl292/grammers" }
 grammers-mtproto = { git = "https://github.com/AlexPl292/grammers" }
 async-trait = "0.1.48"
+regex = "1.5.4"
 
 [dev-dependencies]
 tempdir = "0.3.7"
