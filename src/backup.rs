@@ -823,10 +823,16 @@ fn get_last_file(chat_path: &Path) -> Option<DirEntry> {
         .max_by(|left, right| {
             compare_by_names(
                 left.as_ref()
-                    .map_or("", |dir| dir.file_name().to_str().unwrap()),
+                    .map_or(String::from(""), |dir| {
+                        String::from(dir.file_name().to_str().unwrap())
+                    })
+                    .as_str(),
                 right
                     .as_ref()
-                    .map_or("", |dir| dir.file_name().to_str().unwrap()),
+                    .map_or(String::from(""), |dir| {
+                        String::from(dir.file_name().to_str().unwrap())
+                    })
+                    .as_str(),
             )
         })?
         .unwrap();
