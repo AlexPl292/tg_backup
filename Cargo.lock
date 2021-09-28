@@ -1131,7 +1131,7 @@ dependencies = [
 
 [[package]]
 name = "tg_backup"
-version = "0.1.17-alpha.0"
+version = "0.1.17"
 dependencies = [
  "async-trait",
  "chrono",

@@ -1,6 +1,6 @@
 [package]
 name = "tg_backup"
-version = "0.1.17-alpha.0"
+version = "0.1.17"
 authors = ["Alex Plate <AlexPl292@gmail.com>"]
 edition = "2018"
 license = "Apache-3.0"
