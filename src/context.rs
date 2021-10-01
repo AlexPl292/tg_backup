@@ -50,6 +50,7 @@ pub struct MainContext {
     pub(crate) excluded_chats: Vec<i32>,
     pub(crate) output_dir: PathBuf,
     pub(crate) quite_mode: bool,
+    pub(crate) max_attachment_size_in_bytes: Option<i32>,
 }
 
 impl MainContext {
@@ -59,6 +60,7 @@ impl MainContext {
         batch_size: i32,
         output_dir: PathBuf,
         quite_mode: bool,
+        max_attachment_size_in_bytes: Option<i32>,
     ) -> MainContext {
         MainContext {
             date: chrono::offset::Utc::now(),
@@ -68,6 +70,7 @@ impl MainContext {
             excluded_chats,
             output_dir,
             quite_mode,
+            max_attachment_size_in_bytes,
         }
     }
 }

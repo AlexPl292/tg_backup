@@ -38,7 +38,7 @@ use crate::ext::{ChatExt, MessageExt};
 use crate::in_progress::{InProgress, InProgressInfo};
 use crate::logs::init_logs;
 use crate::opts::{Opts, SubCommand};
-use crate::types::Attachment::PhotoExpired;
+use crate::types::Attachment::{PhotoExpired, TooLarge};
 use crate::types::{
     chat_to_info, msg_to_info, Attachment, BackUpInfo, ChatInfo, FileInfo, Member, MessageInfo,
 };
@@ -105,6 +105,7 @@ pub async fn start_backup(opts: Opts) {
         opts.batch_size,
         output_dir.as_path(),
         opts.quiet,
+        opts.file_limit,
     );
 
     let main_mut_context = Arc::new(RwLock::new(MainMutContext {
@@ -464,6 +465,7 @@ fn save_current_information(
     batch_size: i32,
     output_dir: &Path,
     quite_mode: bool,
+    file_limit: Option<i32>,
 ) -> MainContext {
     let loading_chats = if chats.is_empty() { None } else { Some(chats) };
     let mut main_context = MainContext::init(
@@ -472,6 +474,7 @@ fn save_current_information(
         batch_size,
         output_dir.clone().to_path_buf(),
         quite_mode,
+        file_limit.map(|x| x * 1024 * 1024),
     );
 
     let path_string = format!("{}/backup.json", output_dir.display());
@@ -696,7 +699,7 @@ async fn extract_dialog(
                         return Ok(());
                     }
                 }
-                let saving_result = save_message(&message, &mut chat_ctx).await;
+                let saving_result = save_message(&message, &mut chat_ctx, &main_ctx).await;
                 if let Err(_) = saving_result {
                     log::error!("Error while loading");
                     if let Some(pb) = chat_ctx.pb.as_mut() {
@@ -871,7 +874,11 @@ fn compare_by_names(first_name: &str, second_name: &str) -> Ordering {
     }
 }
 
-async fn save_message(message: &Message, chat_ctx: &mut ChatContext) -> Result<(), ()> {
+async fn save_message(
+    message: &Message,
+    chat_ctx: &mut ChatContext,
+    main_ctx: &Arc<MainContext>,
+) -> Result<(), ()> {
     let message_text = message.text();
     let types = &chat_ctx.types;
     let option_photo = message.photo();
@@ -889,115 +896,139 @@ async fn save_message(message: &Message, chat_ctx: &mut ChatContext) -> Result<(
         if let Some(id) = photo_id {
             let file_name = format!("{}@photo.jpg", id);
             let photos_path = current_type.path().join(file_name.as_str());
-            let downloaded = photo
-                .thumbs()
-                .largest()
-                .unwrap()
-                .download(photos_path)
-                .await;
-            let photo_path = format!("../{}/{}", current_type.folder, file_name);
-            let attachment = Attachment::Photo(FileInfo {
-                id,
-                path: photo_path,
-            });
-            if let Err(e) = downloaded {
-                if chat_ctx.file_issue == id {
-                    chat_ctx.file_issue_count += 1;
-                    if chat_ctx.file_issue_count > 5 {
-                        log::error!("Cannot download photo, no more attempts {}", e);
-                        Some(Attachment::Error(format!("Cannot load: {}", e)))
+            let photo_size = photo.thumbs().largest().unwrap().size();
+
+            if main_ctx.max_attachment_size_in_bytes.is_some()
+                && main_ctx.max_attachment_size_in_bytes.unwrap() < photo_size as i32
+            {
+                Some(TooLarge {
+                    size: photo_size as i32,
+                })
+            } else {
+                let downloaded = photo
+                    .thumbs()
+                    .largest()
+                    .unwrap()
+                    .download(photos_path)
+                    .await;
+                let photo_path = format!("../{}/{}", current_type.folder, file_name);
+                let attachment = Attachment::Photo(FileInfo {
+                    id,
+                    path: photo_path,
+                });
+                if let Err(e) = downloaded {
+                    if chat_ctx.file_issue == id {
+                        chat_ctx.file_issue_count += 1;
+                        if chat_ctx.file_issue_count > 5 {
+                            log::error!("Cannot download photo, no more attempts {}", e);
+                            Some(Attachment::Error(format!("Cannot load: {}", e)))
+                        } else {
+                            log::warn!(
+                                "Cannot download photo, attempt {}, error: {}",
+                                chat_ctx.file_issue_count,
+                                e
+                            );
+                            return Err(());
+                        }
                     } else {
-                        log::warn!(
-                            "Cannot download photo, attempt {}, error: {}",
-                            chat_ctx.file_issue_count,
-                            e
-                        );
+                        chat_ctx.file_issue = id;
+                        chat_ctx.file_issue_count = 0;
+                        log::warn!("Cannot download photo, first attempt: {}", e);
                         return Err(());
                     }
                 } else {
-                    chat_ctx.file_issue = id;
-                    chat_ctx.file_issue_count = 0;
-                    log::warn!("Cannot download photo, first attempt: {}", e);
-                    return Err(());
+                    Some(attachment)
                 }
-            } else {
-                Some(attachment)
             }
         } else {
             Some(PhotoExpired)
         }
     } else if let Some(mut doc) = option_document {
-        let doc_id = doc.id();
-        let doc_name = doc.name().to_string();
-        let (attachment, file_path) = if doc.is_round_message() {
-            if let Some(pb) = chat_ctx.pb.as_mut() {
-                pb.message(format!("Loading {} [round   ] ", chat_ctx.visual_id.as_str()).as_str());
-            }
-            log::debug!("Round message {}", message_text);
-            let current_type = types.get(ROUND).unwrap();
-            let mut file_name = doc_name;
-            file_name = format!("{}@{}", doc_id, file_name);
-            let file_name = current_type.format(file_name);
-            let file_path = current_type.path().join(file_name.as_str());
-            let att_path = format!("../{}/{}", current_type.folder, file_name);
-            let attachment = Attachment::Round(FileInfo {
-                id: doc_id,
-                path: att_path,
-            });
-            (attachment, file_path)
-        } else if doc.is_voice_message() {
-            if let Some(pb) = chat_ctx.pb.as_mut() {
-                pb.message(format!("Loading {} [voice   ] ", chat_ctx.visual_id.as_str()).as_str());
-            }
-            log::debug!("Voice message {}", message_text);
-            let current_type = types.get(VOICE).unwrap();
-            let mut file_name = doc_name;
-            file_name = format!("{}@{}", doc_id, file_name);
-            let file_name = current_type.format(file_name);
-            let file_path = current_type.path().join(file_name.as_str());
-            let att_path = format!("../{}/{}", current_type.folder, file_name);
-            let attachment = Attachment::Voice(FileInfo {
-                id: doc_id,
-                path: att_path,
-            });
-            (attachment, file_path)
+        if main_ctx.max_attachment_size_in_bytes.is_some()
+            && main_ctx.max_attachment_size_in_bytes.unwrap() < doc.size() as i32
+        {
+            Some(TooLarge {
+                size: doc.size() as i32,
+            })
         } else {
-            if let Some(pb) = chat_ctx.pb.as_mut() {
-                pb.message(format!("Loading {} [file    ] ", chat_ctx.visual_id.as_str()).as_str());
-            }
-            log::debug!("File {}", message_text);
-            let current_type = types.get(FILE).unwrap();
-            let mut file_name = doc_name;
-            file_name = format!("{}@{}", doc_id, file_name);
-            let file_name = current_type.format(file_name);
-            let file_path = current_type.path().join(file_name.as_str());
-            let photo_path = format!("../{}/{}", current_type.folder, file_name);
-            let attachment = Attachment::File(FileInfo {
-                id: doc_id,
-                path: photo_path,
-            });
-            (attachment, file_path)
-        };
+            let doc_id = doc.id();
+            let doc_name = doc.name().to_string();
+            let (attachment, file_path) = if doc.is_round_message() {
+                if let Some(pb) = chat_ctx.pb.as_mut() {
+                    pb.message(
+                        format!("Loading {} [round   ] ", chat_ctx.visual_id.as_str()).as_str(),
+                    );
+                }
+                log::debug!("Round message {}", message_text);
+                let current_type = types.get(ROUND).unwrap();
+                let mut file_name = doc_name;
+                file_name = format!("{}@{}", doc_id, file_name);
+                let file_name = current_type.format(file_name);
+                let file_path = current_type.path().join(file_name.as_str());
+                let att_path = format!("../{}/{}", current_type.folder, file_name);
+                let attachment = Attachment::Round(FileInfo {
+                    id: doc_id,
+                    path: att_path,
+                });
+                (attachment, file_path)
+            } else if doc.is_voice_message() {
+                if let Some(pb) = chat_ctx.pb.as_mut() {
+                    pb.message(
+                        format!("Loading {} [voice   ] ", chat_ctx.visual_id.as_str()).as_str(),
+                    );
+                }
+                log::debug!("Voice message {}", message_text);
+                let current_type = types.get(VOICE).unwrap();
+                let mut file_name = doc_name;
+                file_name = format!("{}@{}", doc_id, file_name);
+                let file_name = current_type.format(file_name);
+                let file_path = current_type.path().join(file_name.as_str());
+                let att_path = format!("../{}/{}", current_type.folder, file_name);
+                let attachment = Attachment::Voice(FileInfo {
+                    id: doc_id,
+                    path: att_path,
+                });
+                (attachment, file_path)
+            } else {
+                if let Some(pb) = chat_ctx.pb.as_mut() {
+                    pb.message(
+                        format!("Loading {} [file    ] ", chat_ctx.visual_id.as_str()).as_str(),
+                    );
+                }
+                log::debug!("File {}", message_text);
+                let current_type = types.get(FILE).unwrap();
+                let mut file_name = doc_name;
+                file_name = format!("{}@{}", doc_id, file_name);
+                let file_name = current_type.format(file_name);
+                let file_path = current_type.path().join(file_name.as_str());
+                let photo_path = format!("../{}/{}", current_type.folder, file_name);
+                let attachment = Attachment::File(FileInfo {
+                    id: doc_id,
+                    path: photo_path,
+                });
+                (attachment, file_path)
+            };
 
-        // TODO handle file migrate
-        let downloaded = doc.download(&file_path).await;
-        if let Err(e) = downloaded {
-            if chat_ctx.file_issue == doc_id {
-                chat_ctx.file_issue_count += 1;
-                if chat_ctx.file_issue_count > 5 {
-                    Some(Attachment::Error(format!("Cannot load: {}", e)))
+            // TODO handle file migrate
+            let downloaded = doc.download(&file_path).await;
+            if let Err(e) = downloaded {
+                if chat_ctx.file_issue == doc_id {
+                    chat_ctx.file_issue_count += 1;
+                    if chat_ctx.file_issue_count > 5 {
+                        Some(Attachment::Error(format!("Cannot load: {}", e)))
+                    } else {
+                        log::error!("Cannot download photo");
+                        return Err(());
+                    }
                 } else {
+                    chat_ctx.file_issue = doc_id;
+                    chat_ctx.file_issue_count = 0;
                     log::error!("Cannot download photo");
                     return Err(());
                 }
             } else {
-                chat_ctx.file_issue = doc_id;
-                chat_ctx.file_issue_count = 0;
-                log::error!("Cannot download photo");
-                return Err(());
+                Some(attachment)
             }
-        } else {
-            Some(attachment)
         }
     } else if let Some(geo) = option_geo {
         Some(Attachment::Geo(geo))

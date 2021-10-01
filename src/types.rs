@@ -67,6 +67,7 @@ pub enum Attachment {
     GeoLive(GeoLiveInfo),
     Contact(ContactInfo),
     PhotoExpired,
+    TooLarge { size: i32 },
     Error(String),
 }
 

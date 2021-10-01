@@ -74,6 +74,10 @@ pub struct Opts {
     #[clap(long)]
     pub panic_to_stderr: bool,
 
+    /// Maximum size of the attachment in MB.
+    #[clap(long)]
+    pub file_limit: Option<i32>,
+
     #[clap(subcommand)]
     pub auth: Option<SubCommand>,
 }
