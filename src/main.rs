@@ -18,8 +18,8 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use tg_backup::opts::Opts;
 use clap::Clap;
+use tg_backup::opts::Opts;
 
 #[tokio::main]
 async fn main() {

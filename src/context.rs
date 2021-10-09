@@ -51,6 +51,7 @@ pub struct MainContext {
     pub(crate) output_dir: PathBuf,
     pub(crate) quite_mode: bool,
     pub(crate) max_attachment_size_in_bytes: Option<i32>,
+    pub(crate) test: bool,
 }
 
 impl MainContext {
@@ -61,6 +62,7 @@ impl MainContext {
         output_dir: PathBuf,
         quite_mode: bool,
         max_attachment_size_in_bytes: Option<i32>,
+        test: bool,
     ) -> MainContext {
         MainContext {
             date: chrono::offset::Utc::now(),
@@ -71,6 +73,7 @@ impl MainContext {
             output_dir,
             quite_mode,
             max_attachment_size_in_bytes,
+            test,
         }
     }
 }
@@ -133,11 +136,11 @@ impl ChatContext {
         if self.messages_accumulator.len() < main_ctx.batch_size as usize {
             return false;
         }
-        self.force_drop_messages();
+        self.force_drop_messages(main_ctx);
         return true;
     }
 
-    pub(crate) fn force_drop_messages(&mut self) {
+    pub(crate) fn force_drop_messages(&mut self, main_ctx: &MainContext) {
         if self.messages_accumulator.is_empty() {
             return;
         }
@@ -166,12 +169,19 @@ impl ChatContext {
             .unwrap()
             .date
             .format("%Y%m%d");
-        let mut file_path = messages_path.join(format!("data-{}-{}.json", first_msg, last_msg));
+        let mut file_path = if main_ctx.test {
+            messages_path.join(format!("data.json"))
+        } else {
+            messages_path.join(format!("data-{}-{}.json", first_msg, last_msg))
+        };
 
         let mut counter = 0;
         while file_path.exists() {
-            file_path =
-                messages_path.join(format!("data-{}-{}-{}.json", first_msg, last_msg, counter));
+            file_path = if main_ctx.test {
+                messages_path.join(format!("data-{}.json", counter))
+            } else {
+                messages_path.join(format!("data-{}-{}-{}.json", first_msg, last_msg, counter))
+            };
             counter += 1;
         }
 

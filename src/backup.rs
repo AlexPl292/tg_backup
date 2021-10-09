@@ -106,6 +106,7 @@ pub async fn start_backup(opts: Opts) {
         output_dir.as_path(),
         opts.quiet,
         opts.file_limit,
+        opts.test,
     );
 
     let main_mut_context = Arc::new(RwLock::new(MainMutContext {
@@ -466,6 +467,7 @@ fn save_current_information(
     output_dir: &Path,
     quite_mode: bool,
     file_limit: Option<i32>,
+    test: bool,
 ) -> MainContext {
     let loading_chats = if chats.is_empty() { None } else { Some(chats) };
     let mut main_context = MainContext::init(
@@ -475,6 +477,7 @@ fn save_current_information(
         output_dir.clone().to_path_buf(),
         quite_mode,
         file_limit.map(|x| x * 1024 * 1024),
+        test,
     );
 
     let path_string = format!("{}/backup.json", output_dir.display());
@@ -687,7 +690,7 @@ async fn extract_dialog(
                 let message_id = message.id();
                 if let Some(end_time) = end_loading_time {
                     if message_date < end_time {
-                        chat_ctx.force_drop_messages();
+                        chat_ctx.force_drop_messages(&main_ctx);
                         in_progress.remove_file();
                         if let Ok(mut ctx) = main_mut_ctx.write() {
                             ctx.already_finished.push(chat_id);
@@ -719,7 +722,7 @@ async fn extract_dialog(
                     };
                     in_progress.write_data(&info);
                     log::info!("Force drop messages. Counter: {}", info.messages_counter);
-                    chat_ctx.force_drop_messages();
+                    chat_ctx.force_drop_messages(&main_ctx);
                     return Err(());
                 }
 
@@ -753,7 +756,7 @@ async fn extract_dialog(
                 counter += 1;
             }
             Ok(None) => {
-                chat_ctx.force_drop_messages();
+                chat_ctx.force_drop_messages(&main_ctx);
                 in_progress.remove_file();
                 if let Ok(mut ctx) = main_mut_ctx.write() {
                     ctx.already_finished.push(chat_id);
@@ -808,7 +811,7 @@ async fn extract_dialog(
         in_progress.write_data(&info);
     }
 
-    chat_ctx.force_drop_messages();
+    chat_ctx.force_drop_messages(&main_ctx);
 
     // if let Some(pb) = chat_ctx.pb.as_mut() {
     //     pb.finish();

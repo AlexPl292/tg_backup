@@ -18,18 +18,18 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use clap::Clap;
+use grammers_client::types::Dialog;
+use grammers_client::{Client, Config, InputMessage};
+use grammers_session::Session;
+use serde_json::value::Value::Null;
+use serde_json::Value;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
-use std::{fs, thread};
 use std::time::Duration;
-use grammers_client::{Client, Config, InputMessage};
-use grammers_session::Session;
+use std::{fs, thread};
 use tg_backup::opts::Opts;
-use clap::Clap;
-use grammers_client::types::Dialog;
-use serde_json::Value;
-use serde_json::value::Value::Null;
 
 #[tokio::test]
 async fn test_add() {
@@ -42,8 +42,8 @@ async fn test_add() {
         api_hash: api_hash.clone(),
         params: Default::default(),
     })
-        .await
-        .unwrap();
+    .await
+    .unwrap();
 
     let _ = fs::remove_dir_all("backup");
 
@@ -58,10 +58,22 @@ async fn test_add() {
 
     thread::sleep(Duration::from_millis(1000));
 
-    let opts = Opts::parse_from(&["tg_backup", "--included-chats", "1720199897", "--quiet", "--panic-to-stderr"]);
+    let opts = Opts::parse_from(&[
+        "tg_backup",
+        "--included-chats",
+        "1720199897",
+        "--quiet",
+        "--panic-to-stderr",
+        "--test",
+    ]);
     tg_backup::backup::start_backup(opts).await;
 
-    let file = BufReader::new(File::open(&Path::new("backup/chats/1720199897.tg_backup_test_2.tg_backup_test_2_bot/messages/data-20211009-20211009.json")).unwrap());
+    let file = BufReader::new(
+        File::open(&Path::new(
+            "backup/chats/1720199897.tg_backup_test_2.tg_backup_test_2_bot/messages/data.json",
+        ))
+        .unwrap(),
+    );
     let existing_data: Value = serde_json::from_reader(file).unwrap();
 
     // Checks
@@ -79,7 +91,10 @@ async fn test_add() {
 }
 
 async fn forward(client: Client, main_dialog: Dialog, second_dialog: Dialog) {
-    client.forward_messages(main_dialog.chat(), &[214743], second_dialog.chat).await.unwrap();
+    client
+        .forward_messages(main_dialog.chat(), &[214743], second_dialog.chat)
+        .await
+        .unwrap();
 }
 
 async fn cleanup(client: &Client, dialog: &Dialog) {
@@ -88,11 +103,17 @@ async fn cleanup(client: &Client, dialog: &Dialog) {
     while let Some(message) = messages_iter.next().await.unwrap() {
         message_ids.push(message.id());
     }
-    client.delete_messages(dialog.chat(), &message_ids).await.unwrap();
+    client
+        .delete_messages(dialog.chat(), &message_ids)
+        .await
+        .unwrap();
 }
 
 async fn send_hello(client: &Client, dialog: &Dialog) {
-    client.send_message(dialog.chat(), InputMessage::text("Hello")).await.unwrap();
+    client
+        .send_message(dialog.chat(), InputMessage::text("Hello"))
+        .await
+        .unwrap();
 }
 
 async fn get_dialog(client: &Client, id: i32) -> Result<Dialog, ()> {
@@ -102,5 +123,5 @@ async fn get_dialog(client: &Client, id: i32) -> Result<Dialog, ()> {
             return Ok(dialog);
         }
     }
-    return Err(())
+    return Err(());
 }
