@@ -27,7 +27,9 @@ use grammers_client::{Client, Config, InputMessage};
 use grammers_session::Session;
 use tg_backup::opts::Opts;
 use clap::Clap;
+use grammers_client::types::Dialog;
 use serde_json::Value;
+use serde_json::value::Value::Null;
 
 #[tokio::test]
 async fn test_add() {
@@ -43,32 +45,62 @@ async fn test_add() {
         .await
         .unwrap();
 
-    fs::remove_dir_all("backup").unwrap();
+    let _ = fs::remove_dir_all("backup");
 
-    let mut dialog_iter = client.iter_dialogs();
-    while let Some(dialog) = dialog_iter.next().await.unwrap() {
-        if dialog.chat().id() == 1720199897 {
-            let mut messages_iter = client.iter_messages(dialog.chat());
-            let mut message_ids = vec![];
-            while let Some(message) = messages_iter.next().await.unwrap() {
-                message_ids.push(message.id());
-            }
-            client.delete_messages(dialog.chat(), &message_ids).await.unwrap();
-            client.send_message(dialog.chat(), InputMessage::text("Hello")).await.unwrap();
-            break;
-        }
-    }
+    let main_dialog = get_dialog(&client, 1720199897).await.unwrap();
+    let second_dialog = get_dialog(&client, 1707414104).await.unwrap();
+
+    cleanup(&client, &main_dialog).await;
+
+    // Tests
+    send_hello(&client, &main_dialog).await;
+    forward(client, main_dialog, second_dialog).await;
 
     thread::sleep(Duration::from_millis(1000));
 
-    let opts = Opts::parse_from(&["tg_backup", "--included-chats", "1720199897", "--quiet"]);
+    let opts = Opts::parse_from(&["tg_backup", "--included-chats", "1720199897", "--quiet", "--panic-to-stderr"]);
     tg_backup::backup::start_backup(opts).await;
 
     let file = BufReader::new(File::open(&Path::new("backup/chats/1720199897.tg_backup_test_2.tg_backup_test_2_bot/messages/data-20211009-20211009.json")).unwrap());
     let existing_data: Value = serde_json::from_reader(file).unwrap();
 
-    let last_data = &existing_data[1];
+    // Checks
+    let last_data = &existing_data[2];
     assert_eq!(422281, last_data["sender_id"]);
     assert_eq!("Alex", last_data["sender_name"]);
     assert_eq!("Hello", last_data["text"]);
+
+    let last_data = &existing_data[1];
+    assert_eq!(422281, last_data["sender_id"]);
+    assert_eq!("Alex", last_data["sender_name"]);
+    assert_eq!("Test msg 0", last_data["text"]);
+    assert_eq!(422281, last_data["forwarded_from"]["from_id"]);
+    assert_eq!(Null, last_data["forwarded_from"]["from_name"]); // IDK why
+}
+
+async fn forward(client: Client, main_dialog: Dialog, second_dialog: Dialog) {
+    client.forward_messages(main_dialog.chat(), &[214743], second_dialog.chat).await.unwrap();
+}
+
+async fn cleanup(client: &Client, dialog: &Dialog) {
+    let mut messages_iter = client.iter_messages(dialog.chat());
+    let mut message_ids = vec![];
+    while let Some(message) = messages_iter.next().await.unwrap() {
+        message_ids.push(message.id());
+    }
+    client.delete_messages(dialog.chat(), &message_ids).await.unwrap();
+}
+
+async fn send_hello(client: &Client, dialog: &Dialog) {
+    client.send_message(dialog.chat(), InputMessage::text("Hello")).await.unwrap();
+}
+
+async fn get_dialog(client: &Client, id: i32) -> Result<Dialog, ()> {
+    let mut dialog_iter = client.iter_dialogs();
+    while let Some(dialog) = dialog_iter.next().await.unwrap() {
+        if dialog.chat().id() == id {
+            return Ok(dialog);
+        }
+    }
+    return Err(())
 }
