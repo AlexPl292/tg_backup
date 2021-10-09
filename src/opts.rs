@@ -25,7 +25,7 @@ use clap::ValueHint;
 //#[clap(after_help = "Beware `-d`, dragons be here")]
 // We can put something at the end
 
-#[derive(Clap)]
+#[derive(Clap, Debug)]
 #[clap(author, about, version)]
 #[clap(setting = AppSettings::ColorAuto)]
 #[clap(setting = AppSettings::ColoredHelp)]
@@ -82,13 +82,13 @@ pub struct Opts {
     pub auth: Option<SubCommand>,
 }
 
-#[derive(Clap)]
+#[derive(Clap, Debug)]
 pub enum SubCommand {
     /// Start authentication process
     Auth(Auth),
 }
 
-#[derive(Clap)]
+#[derive(Clap, Debug)]
 pub struct Auth {
     /// Use this folder to create a session file [default: ~/.tg_backup]
     #[clap(long, value_hint = ValueHint::DirPath)]

@@ -18,12 +18,12 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use tg_backup::opts::Opts;
-use clap::Clap;
-
-#[tokio::main]
-async fn main() {
-    let opts: Opts = Opts::parse();
-
-    tg_backup::backup::start_backup(opts).await;
-}
+pub mod backup;
+pub mod opts;
+mod actions;
+mod attachment_type;
+mod context;
+mod ext;
+mod in_progress;
+mod logs;
+mod types;
