@@ -32,6 +32,7 @@ use std::{fs, thread};
 use tg_backup::opts::Opts;
 
 #[tokio::test]
+#[ignore]
 async fn test_add() {
     let api_id = env!("TG_ID").parse().expect("TG_ID invalid");
     let api_hash = env!("TG_HASH").to_string();
