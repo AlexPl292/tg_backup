@@ -114,6 +114,8 @@ jobs:
           TG_ID: ${{ secrets.TG_ID }}
           TG_HASH: ${{ secrets.TG_HASH }}
 
+      - run: chmod +x target/x86_64-unknown-linux-gnu/release/tg_backup
+
       - name: zipping
         uses: papeloto/action-zip@v1
         with:
