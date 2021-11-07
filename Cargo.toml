@@ -2,7 +2,7 @@
 name = "tg_backup"
 version = "0.1.21-alpha.0"
 authors = ["Alex Plate <AlexPl292@gmail.com>"]
-edition = "2018"
+edition = "2021"
 license = "Apache-3.0"
 readme = "README.md"
 description = "Backup your messages from the Telegram messenger"
