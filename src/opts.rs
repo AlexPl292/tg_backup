@@ -19,16 +19,14 @@
  */
 
 use clap::AppSettings;
-use clap::Clap;
+use clap::Parser;
 use clap::ValueHint;
 
 //#[clap(after_help = "Beware `-d`, dragons be here")]
 // We can put something at the end
 
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 #[clap(author, about, version)]
-#[clap(setting = AppSettings::ColorAuto)]
-#[clap(setting = AppSettings::ColoredHelp)]
 #[clap(setting = AppSettings::HelpRequired)]
 // #[clap(setting = AppSettings::DisableVersionForSubcommands)]
 pub struct Opts {
@@ -86,13 +84,13 @@ pub struct Opts {
     pub test: bool,
 }
 
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub enum SubCommand {
     /// Start authentication process
     Auth(Auth),
 }
 
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub struct Auth {
     /// Use this folder to create a session file [default: ~/.tg_backup]
     #[clap(long, value_hint = ValueHint::DirPath)]

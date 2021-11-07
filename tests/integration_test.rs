@@ -18,7 +18,7 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use clap::Clap;
+use clap::Parser;
 use grammers_client::types::Dialog;
 use grammers_client::{Client, Config, InputMessage};
 use grammers_session::Session;

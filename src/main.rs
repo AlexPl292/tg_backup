@@ -18,7 +18,7 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use clap::Clap;
+use clap::Parser;
 use tg_backup::opts::Opts;
 
 #[tokio::main]
