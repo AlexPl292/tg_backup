@@ -55,7 +55,8 @@ async fn test_add() {
 
     // Tests
     send_hello(&client, &main_dialog).await;
-    forward(client, main_dialog, second_dialog).await;
+    forward(&client, &main_dialog, second_dialog).await;
+    send_dice(&client, &main_dialog).await;
 
     thread::sleep(Duration::from_millis(1000));
 
@@ -78,20 +79,28 @@ async fn test_add() {
     let existing_data: Value = serde_json::from_reader(file).unwrap();
 
     // Checks
-    let last_data = &existing_data[2];
+    let last_data = &existing_data[3];
     assert_eq!(422281, last_data["sender_id"]);
     assert_eq!("Alex", last_data["sender_name"]);
     assert_eq!("Hello", last_data["text"]);
 
-    let last_data = &existing_data[1];
+    let last_data = &existing_data[2];
     assert_eq!(422281, last_data["sender_id"]);
     assert_eq!("Alex", last_data["sender_name"]);
     assert_eq!("Test msg 0", last_data["text"]);
     assert_eq!(422281, last_data["forwarded_from"]["from_id"]);
     assert_eq!(Null, last_data["forwarded_from"]["from_name"]); // IDK why
+
+    let last_data = &existing_data[1];
+    assert_eq!(422281, last_data["sender_id"]);
+    assert_eq!("Alex", last_data["sender_name"]);
+    assert_eq!("", last_data["text"]);
+    assert!(last_data["attachment"]["Dice"]["value"].is_number());
+    assert_eq!("🎲", last_data["attachment"]["Dice"]["emoticon"]);
+
 }
 
-async fn forward(client: Client, main_dialog: Dialog, second_dialog: Dialog) {
+async fn forward(client: &Client, main_dialog: &Dialog, second_dialog: Dialog) {
     client
         .forward_messages(main_dialog.chat(), &[214743], second_dialog.chat)
         .await
@@ -99,7 +108,6 @@ async fn forward(client: Client, main_dialog: Dialog, second_dialog: Dialog) {
 }
 
 async fn cleanup(client: &Client, dialog: &Dialog) {
-    let mut messages_iter = client.iter_messages(dialog.chat());
     let mut message_ids = vec![];
     while let Some(message) = messages_iter.next().await.unwrap() {
         message_ids.push(message.id());
@@ -113,6 +121,13 @@ async fn cleanup(client: &Client, dialog: &Dialog) {
 async fn send_hello(client: &Client, dialog: &Dialog) {
     client
         .send_message(dialog.chat(), InputMessage::text("Hello"))
+        .await
+        .unwrap();
+}
+
+async fn send_dice(client: &Client, dialog: &Dialog) {
+    client
+        .send_message(dialog.chat(), InputMessage::text("").dice(String::from("🎲")))
         .await
         .unwrap();
 }

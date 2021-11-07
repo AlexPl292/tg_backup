@@ -65,6 +65,7 @@ pub enum Attachment {
     Round(FileInfo),
     Geo(GeoInfo),
     GeoLive(GeoLiveInfo),
+    Dice(DiceInfo),
     Contact(ContactInfo),
     PhotoExpired,
     TooLarge { size: i32 },
@@ -219,6 +220,12 @@ pub struct GeoLiveInfo {
     pub period: i32,
     pub heading: Option<i32>,
     pub proximity_notification_radius: Option<i32>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct DiceInfo {
+    pub value: i32,
+    pub emoticon: String,
 }
 
 #[derive(Serialize, Deserialize)]

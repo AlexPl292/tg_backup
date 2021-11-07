@@ -888,6 +888,7 @@ async fn save_message(
     let option_document = message.document();
     let option_geo = message.geo();
     let option_geo_live = message.geo_live();
+    let option_dice = message.dice();
     let option_contact = message.contact();
     let attachment = if let Some(photo) = option_photo {
         if let Some(pb) = chat_ctx.pb.as_mut() {
@@ -1037,6 +1038,8 @@ async fn save_message(
         Some(Attachment::Geo(geo))
     } else if let Some(geo) = option_geo_live {
         Some(Attachment::GeoLive(geo))
+    } else if let Some(dice) = option_dice {
+        Some(Attachment::Dice(dice))
     } else if let Some(contact) = option_contact {
         Some(Attachment::Contact(contact))
     } else {

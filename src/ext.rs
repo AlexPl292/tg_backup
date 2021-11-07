@@ -18,7 +18,7 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::types::{ContactInfo, ForwardInfo, GeoInfo, GeoLiveInfo, Member, ReplyInfo};
+use crate::types::{ContactInfo, DiceInfo, ForwardInfo, GeoInfo, GeoLiveInfo, Member, ReplyInfo};
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use grammers_client::client::auth::InvocationError;
@@ -32,6 +32,7 @@ use std::time::Duration;
 pub trait MessageExt {
     fn geo(&self) -> Option<GeoInfo>;
     fn geo_live(&self) -> Option<GeoLiveInfo>;
+    fn dice(&self) -> Option<DiceInfo>;
     fn contact(&self) -> Option<ContactInfo>;
     fn fwd_from(&self) -> Option<ForwardInfo>;
     fn reply_to(&self) -> Option<ReplyInfo>;
@@ -55,6 +56,18 @@ impl MessageExt for Message {
                 heading: geo.heading(),
                 period: geo.period(),
                 proximity_notification_radius: geo.proximity_notification_radius(),
+            })
+        } else {
+            None
+        }
+    }
+
+    fn dice(&self) -> Option<DiceInfo> {
+        let media = self.media()?;
+        if let Media::Dice(dice) = media {
+            Some(DiceInfo {
+                value: dice.value,
+                emoticon: dice.emoticon,
             })
         } else {
             None
