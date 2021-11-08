@@ -98,6 +98,11 @@ async fn test_add() {
     assert!(last_data["attachment"]["Dice"]["value"].is_number());
     assert_eq!("🎲", last_data["attachment"]["Dice"]["emoticon"]);
 
+    let last_data = &existing_data[0];
+    assert_eq!(422281, last_data["sender_id"]);
+    assert_eq!("Alex", last_data["sender_name"]);
+    assert_eq!("", last_data["text"]);
+    assert_eq!("HistoryClear", last_data["action"]);
 }
 
 async fn forward(client: &Client, main_dialog: &Dialog, second_dialog: Dialog) {
@@ -108,6 +113,7 @@ async fn forward(client: &Client, main_dialog: &Dialog, second_dialog: Dialog) {
 }
 
 async fn cleanup(client: &Client, dialog: &Dialog) {
+    let mut messages_iter = client.iter_messages(dialog.chat());
     let mut message_ids = vec![];
     while let Some(message) = messages_iter.next().await.unwrap() {
         message_ids.push(message.id());

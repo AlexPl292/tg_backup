@@ -46,6 +46,8 @@ pub enum Action {
         access_hash: i64,
         invites: Vec<Member>,
     },
+    HistoryClear {
+    },
     UnsupportedByTgBackup(String),
 }
 
@@ -116,3 +118,12 @@ impl From<&tl::types::MessageActionInviteToGroupCall> for Action {
         }
     }
 }
+
+/*
+// I don't know how to call it
+impl From<&tl::types::MessageActionHistoryClear> for Action {
+    fn from(data: &tl::types::MessageActionHistoryClear) -> Self {
+        Action::HistoryClear
+    }
+}
+*/
