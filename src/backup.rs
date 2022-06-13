@@ -468,7 +468,7 @@ fn save_current_information(
     output_dir: &Path,
     quite_mode: bool,
     file_limit: Option<i32>,
-    max_participants: Option<i32>,
+    max_participants: i32,
     test: bool,
 ) -> MainContext {
     let loading_chats = if chats.is_empty() { None } else { Some(chats) };
@@ -540,17 +540,14 @@ async fn extract_dialog(
         return Ok(());
     }
 
-    // TODO: move it to options
-    if let Some(max_participants) = main_ctx.max_participants {
-        if chat.participants_count() > max_participants {
-            log::info!(
-                "Skip chat. name: {} id: {} because it has more than {} participants",
-                chat_name,
-                chat_id,
-                max_participants
-            );
-            return Ok(());
-        }
+    if main_ctx.max_participants >= 0 && chat.participants_count() > main_ctx.max_participants {
+        log::info!(
+            "Skip chat. name: {} id: {} because it has more than {} participants",
+            chat_name,
+            chat_id,
+            main_ctx.max_participants
+        );
+        return Ok(());
     }
 
     let visual_id = chat.visual_id();
