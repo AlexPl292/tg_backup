@@ -73,6 +73,10 @@ pub struct Opts {
     #[clap(value_parser, long)]
     pub file_limit: Option<i32>,
 
+    /// Skip saving chat if there is more participants
+    #[clap(value_parser, long)]
+    pub max_participants: Option<i32>,
+
     #[clap(subcommand)]
     pub auth: Option<SubCommand>,
 

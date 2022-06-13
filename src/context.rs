@@ -51,6 +51,7 @@ pub struct MainContext {
     pub(crate) output_dir: PathBuf,
     pub(crate) quite_mode: bool,
     pub(crate) max_attachment_size_in_bytes: Option<i32>,
+    pub(crate) max_participants: Option<i32>,
     pub(crate) test: bool,
 }
 
@@ -62,6 +63,7 @@ impl MainContext {
         output_dir: PathBuf,
         quite_mode: bool,
         max_attachment_size_in_bytes: Option<i32>,
+        max_participants: Option<i32>,
         test: bool,
     ) -> MainContext {
         MainContext {
@@ -73,6 +75,7 @@ impl MainContext {
             output_dir,
             quite_mode,
             max_attachment_size_in_bytes,
+            max_participants,
             test,
         }
     }

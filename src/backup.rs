@@ -106,6 +106,7 @@ pub async fn start_backup(opts: Opts) {
         output_dir.as_path(),
         opts.quiet,
         opts.file_limit,
+        opts.max_participants,
         opts.test,
     );
 
@@ -296,7 +297,7 @@ fn make_path(session_file_path: Option<String>, session_file_name: String) -> Re
     Ok(file_path)
 }
 
-type MyResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+type MyResult<T> = Result<T, Box<dyn std::error::Error>>;
 
 fn prompt(message: &str) -> MyResult<String> {
     let stdout = io::stdout();
@@ -467,6 +468,7 @@ fn save_current_information(
     output_dir: &Path,
     quite_mode: bool,
     file_limit: Option<i32>,
+    max_participants: Option<i32>,
     test: bool,
 ) -> MainContext {
     let loading_chats = if chats.is_empty() { None } else { Some(chats) };
@@ -477,6 +479,7 @@ fn save_current_information(
         output_dir.clone().to_path_buf(),
         quite_mode,
         file_limit.map(|x| x * 1024 * 1024),
+        max_participants,
         test,
     );
 
@@ -538,15 +541,16 @@ async fn extract_dialog(
     }
 
     // TODO: move it to options
-    let max_participants = 20;
-    if chat.participants_count() > max_participants {
-        log::info!(
-            "Skip chat. name: {} id: {} because it has more than {} participants",
-            chat_name,
-            chat_id,
-            max_participants
-        );
-        return Ok(());
+    if let Some(max_participants) = main_ctx.max_participants {
+        if chat.participants_count() > max_participants {
+            log::info!(
+                "Skip chat. name: {} id: {} because it has more than {} participants",
+                chat_name,
+                chat_id,
+                max_participants
+            );
+            return Ok(());
+        }
     }
 
     let visual_id = chat.visual_id();
@@ -692,7 +696,7 @@ async fn extract_dialog(
         end_loading_time,
     );
 
-    let mut pivot_time = chrono::offset::Utc::now();
+    let mut pivot_time = Utc::now();
 
     loop {
         let msg = iter_messages.next().await;
@@ -738,7 +742,7 @@ async fn extract_dialog(
                     return Err(());
                 }
 
-                let current_time = chrono::offset::Utc::now();
+                let current_time = Utc::now();
                 let diff = current_time - pivot_time;
                 if diff > chrono::Duration::seconds(10) {
                     log::info!(
