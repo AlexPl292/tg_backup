@@ -129,7 +129,8 @@ jobs:
 
   perform-release:
 
-    needs: [ build-macos, build-windows, build-linux ]
+#    needs: [ build-macos, build-windows, build-linux ]
+    needs: [ build-windows, build-linux ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -145,10 +146,10 @@ jobs:
         with:
           name: tg_backup-x86_64-pc-windows-msvc.zip
 
-      - name: Download macos artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: tg_backup-x86_64-apple-darwin.zip
+#      - name: Download macos artifacts
+#        uses: actions/download-artifact@v2
+#        with:
+#          name: tg_backup-x86_64-apple-darwin.zip
 
       - name: Extract release notes
         uses: ffurrer2/extract-release-notes@v1
@@ -161,7 +162,7 @@ jobs:
           files: |
             tg_backup-x86_64-unknown-linux-gnu.zip
             tg_backup-x86_64-pc-windows-msvc.zip
-            tg_backup-x86_64-apple-darwin.zip
+#            tg_backup-x86_64-apple-darwin.zip
           body_path: RELEASE_NOTES.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -171,11 +172,11 @@ jobs:
         run: |
           printf "::set-output name=%s::%s\n" tag-name "${GITHUB_REF#refs/tags/}"
 
-      - name: Update the Homebrew formula with latest release
-        uses: mislav/bump-homebrew-formula-action@v1
-        with:
-          formula-name: tg_backup
-          download-url: https://github.com/AlexPl292/tg_backup/releases/download/${{ steps.extract-version.outputs.tag-name }}/tg_backup-x86_64-apple-darwin.zip
-          homebrew-tap: AlexPl292/homebrew-tg_backup
-        env:
-          COMMITTER_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
+#      - name: Update the Homebrew formula with latest release
+#        uses: mislav/bump-homebrew-formula-action@v1
+#        with:
+#          formula-name: tg_backup
+#          download-url: https://github.com/AlexPl292/tg_backup/releases/download/${{ steps.extract-version.outputs.tag-name }}/tg_backup-x86_64-apple-darwin.zip
+#          homebrew-tap: AlexPl292/homebrew-tg_backup
+#        env:
+#          COMMITTER_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
