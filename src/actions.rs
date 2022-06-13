@@ -46,8 +46,7 @@ pub enum Action {
         access_hash: i64,
         invites: Vec<Member>,
     },
-    HistoryClear {
-    },
+    HistoryClear {},
     UnsupportedByTgBackup(String),
 }
 

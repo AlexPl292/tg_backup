@@ -133,7 +133,10 @@ async fn send_hello(client: &Client, dialog: &Dialog) {
 
 async fn send_dice(client: &Client, dialog: &Dialog) {
     client
-        .send_message(dialog.chat(), InputMessage::text("").dice(String::from("🎲")))
+        .send_message(
+            dialog.chat(),
+            InputMessage::text("").dice(String::from("🎲")),
+        )
         .await
         .unwrap();
 }

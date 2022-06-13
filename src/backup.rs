@@ -1063,7 +1063,7 @@ fn get_action(message: &Message) -> Option<Action> {
         tl::enums::MessageAction::InviteToGroupCall(invite_to_group_call) => {
             invite_to_group_call.into()
         }
-        tl::enums::MessageAction::HistoryClear => Action::HistoryClear{},
+        tl::enums::MessageAction::HistoryClear => Action::HistoryClear {},
         _ => Action::UnsupportedByTgBackup(format!("{:?}", action)),
     };
     Some(result)
