@@ -461,8 +461,8 @@ async fn start_iteration(
 }
 
 fn save_current_information(
-    chats: Vec<i32>,
-    excluded: Vec<i32>,
+    chats: Vec<i64>,
+    excluded: Vec<i64>,
     batch_size: i32,
     output_dir: &Path,
     quite_mode: bool,

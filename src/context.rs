@@ -36,7 +36,7 @@ pub const ROUND: &'static str = "round";
 pub const VOICE: &'static str = "voice";
 
 pub struct MainMutContext {
-    pub(crate) already_finished: Vec<i32>,
+    pub(crate) already_finished: Vec<i64>,
     pub(crate) amount_of_dialogs: Option<usize>,
 
     pub(crate) total_flood_wait: u32,
@@ -46,8 +46,8 @@ pub struct MainContext {
     pub(crate) date: DateTime<Utc>,
     pub(crate) date_from: Option<DateTime<Utc>>,
     pub(crate) batch_size: i32,
-    pub(crate) included_chats: Option<Vec<i32>>,
-    pub(crate) excluded_chats: Vec<i32>,
+    pub(crate) included_chats: Option<Vec<i64>>,
+    pub(crate) excluded_chats: Vec<i64>,
     pub(crate) output_dir: PathBuf,
     pub(crate) quite_mode: bool,
     pub(crate) max_attachment_size_in_bytes: Option<i32>,
@@ -56,8 +56,8 @@ pub struct MainContext {
 
 impl MainContext {
     pub fn init(
-        loading_chats: Option<Vec<i32>>,
-        excluded_chats: Vec<i32>,
+        loading_chats: Option<Vec<i64>>,
+        excluded_chats: Vec<i64>,
         batch_size: i32,
         output_dir: PathBuf,
         quite_mode: bool,
@@ -65,7 +65,7 @@ impl MainContext {
         test: bool,
     ) -> MainContext {
         MainContext {
-            date: chrono::offset::Utc::now(),
+            date: Utc::now(),
             date_from: None,
             batch_size,
             included_chats: loading_chats,

@@ -115,7 +115,7 @@ impl MessageExt for Message {
 
 #[async_trait]
 pub trait ChatExt: Send {
-    fn id(&self) -> i32;
+    fn id(&self) -> i64;
     fn name(&self) -> String;
     async fn members(&self, client: &Client) -> Vec<Member>;
     fn visual_id(&self) -> String;
@@ -124,7 +124,7 @@ pub trait ChatExt: Send {
 
 #[async_trait]
 impl ChatExt for Chat {
-    fn id(&self) -> i32 {
+    fn id(&self) -> i64 {
         self.id()
     }
 

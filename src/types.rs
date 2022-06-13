@@ -29,7 +29,7 @@ use grammers_client::types::{Chat, Message, User};
 #[derive(Serialize, Deserialize)]
 pub struct ChatInfo {
     pub name: String,
-    pub id: i32,
+    pub id: i64,
     pub loaded_up_to: DateTime<Utc>,
     pub total_messages: usize,
 }
@@ -44,7 +44,7 @@ pub struct MessageInfo {
     mentioned: bool,
     outgoing: bool,
     pinned: bool,
-    sender_id: Option<i32>,
+    sender_id: Option<i64>,
     sender_name: Option<String>,
     forwarded_from: Option<ForwardInfo>,
     reply_to: Option<ReplyInfo>,
@@ -115,15 +115,15 @@ pub fn chat_to_info(data: &Chat, loaded_up_to: DateTime<Utc>, total_messages: us
 pub struct BackUpInfo {
     pub date: DateTime<Utc>,
     pub batch_size: i32,
-    pub included_chats: Option<Vec<i32>>,
-    pub excluded_chats: Vec<i32>,
+    pub included_chats: Option<Vec<i64>>,
+    pub excluded_chats: Vec<i64>,
 }
 
 impl BackUpInfo {
     pub fn init(
         date: DateTime<Utc>,
-        loading_chats: Option<Vec<i32>>,
-        excluded_chats: Vec<i32>,
+        loading_chats: Option<Vec<i64>>,
+        excluded_chats: Vec<i64>,
         batch_size: i32,
     ) -> BackUpInfo {
         BackUpInfo {
@@ -140,7 +140,7 @@ impl BackUpInfo {
 pub enum Member {
     Me,
     User {
-        id: i32,
+        id: i64,
         username: Option<String>,
         first_name: String,
         last_name: Option<String>,
@@ -150,7 +150,7 @@ pub enum Member {
         deleted: bool,
     },
     IdOnly {
-        id: i32,
+        id: i64,
     },
 }
 
@@ -187,7 +187,7 @@ impl From<&User> for Member {
 
 #[derive(Serialize, Deserialize)]
 pub struct ForwardInfo {
-    pub from_id: Option<i32>,
+    pub from_id: Option<i64>,
     pub from_name: Option<String>,
     pub date: DateTime<Utc>,
 }

@@ -18,7 +18,6 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use clap::AppSettings;
 use clap::Parser;
 use clap::ValueHint;
 
@@ -27,8 +26,6 @@ use clap::ValueHint;
 
 #[derive(Parser, Debug, Clone)]
 #[clap(author, about, version)]
-#[clap(setting = AppSettings::HelpRequired)]
-// #[clap(setting = AppSettings::DisableVersionForSubcommands)]
 pub struct Opts {
     /// Backup output directory
     #[clap(long, short, value_hint = ValueHint::DirPath)]
@@ -38,13 +35,13 @@ pub struct Opts {
     ///
     /// If both included-chats and excluded_chats have the same value, the chat will be excluded.
     #[clap(short, long)]
-    pub included_chats: Vec<i32>,
+    pub included_chats: Vec<i64>,
 
     /// List of chats that are going to be excluded from saving.
     ///
     /// If both included-chats and excluded_chats have the same value, the chat will be excluded.
     #[clap(short, long)]
-    pub excluded_chats: Vec<i32>,
+    pub excluded_chats: Vec<i64>,
 
     /// Size of batches with messages.
     #[clap(long, default_value = "1000")]
