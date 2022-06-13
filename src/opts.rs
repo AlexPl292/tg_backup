@@ -34,21 +34,21 @@ pub struct Opts {
     /// List of chats that are going to be saved. All chats are saved by default.
     ///
     /// If both included-chats and excluded_chats have the same value, the chat will be excluded.
-    #[clap(value_parser,short, long)]
+    #[clap(value_parser, short, long)]
     pub included_chats: Vec<i64>,
 
     /// List of chats that are going to be excluded from saving.
     ///
     /// If both included-chats and excluded_chats have the same value, the chat will be excluded.
-    #[clap(value_parser,short, long)]
+    #[clap(value_parser, short, long)]
     pub excluded_chats: Vec<i64>,
 
     /// Size of batches with messages.
-    #[clap(value_parser,long, default_value = "1000")]
+    #[clap(value_parser, long, default_value = "1000")]
     pub batch_size: i32,
 
     /// If presented, the previous existing backup will be removed
-    #[clap(value_parser,short, long)]
+    #[clap(value_parser, short, long)]
     pub clean: bool,
 
     /// Path to custom session file [default: ~/.tg_backup/tg_backup.session]
@@ -56,28 +56,28 @@ pub struct Opts {
     pub session_file: Option<String>,
 
     /// Show no output
-    #[clap(value_parser,short, long)]
+    #[clap(value_parser, short, long)]
     pub quiet: bool,
 
     /// Amount of log files that would be kept in the log directory
-    #[clap(value_parser,long, default_value = "1000")]
+    #[clap(value_parser, long, default_value = "1000")]
     pub keep_last_n_logs: usize,
 
     /// By default, panics are saved to log file. Use this option to show panics in stderr.
     ///
     /// If enabled, panics will be printed in stderr and not in logs.
-    #[clap(value_parser,long)]
+    #[clap(value_parser, long)]
     pub panic_to_stderr: bool,
 
     /// Maximum size of the attachment in MB.
-    #[clap(value_parser,long)]
+    #[clap(value_parser, long)]
     pub file_limit: Option<i32>,
 
     #[clap(subcommand)]
     pub auth: Option<SubCommand>,
 
     /// Run test mode
-    #[clap(value_parser,long, hide = true)]
+    #[clap(value_parser, long, hide = true)]
     pub test: bool,
 }
 
@@ -94,6 +94,6 @@ pub struct Auth {
     pub session_file_dir: Option<String>,
 
     /// Custom name for session file
-    #[clap(value_parser,long, default_value = "tg_backup.session")]
+    #[clap(value_parser, long, default_value = "tg_backup.session")]
     pub session_file_name: String,
 }

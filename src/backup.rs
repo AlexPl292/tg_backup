@@ -540,7 +540,12 @@ async fn extract_dialog(
     // TODO: move it to options
     let max_participants = 20;
     if chat.participants_count() > max_participants {
-        log::info!("Skip chat. name: {} id: {} because it has more than {} participants", chat_name, chat_id, max_participants);
+        log::info!(
+            "Skip chat. name: {} id: {} because it has more than {} participants",
+            chat_name,
+            chat_id,
+            max_participants
+        );
         return Ok(());
     }
 
