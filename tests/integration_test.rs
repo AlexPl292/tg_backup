@@ -141,7 +141,7 @@ async fn send_dice(client: &Client, dialog: &Dialog) {
         .unwrap();
 }
 
-async fn get_dialog(client: &Client, id: i32) -> Result<Dialog, ()> {
+async fn get_dialog(client: &Client, id: i64) -> Result<Dialog, ()> {
     let mut dialog_iter = client.iter_dialogs();
     while let Some(dialog) = dialog_iter.next().await.unwrap() {
         if dialog.chat().id() == id {
