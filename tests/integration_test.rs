@@ -68,7 +68,7 @@ async fn test_add() {
         "--panic-to-stderr",
         "--test",
     ]);
-    tg_backup::backup::start_backup(opts).await;
+    tg_backup::backup::start_backup(opts, vec![]).await;
 
     let file = BufReader::new(
         File::open(&Path::new(
