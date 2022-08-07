@@ -23,6 +23,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 
 use crate::attachment_type::AttachmentType;
+use crate::companion::ChannelsStateInfo;
 use crate::types::MessageInfo;
 use chrono::{DateTime, Utc};
 use pbr::ProgressBar;
@@ -40,6 +41,7 @@ pub struct MainMutContext {
     pub(crate) amount_of_dialogs: Option<usize>,
 
     pub(crate) total_flood_wait: u32,
+    pub(crate) long_messages_info: Vec<ChannelsStateInfo>,
 }
 
 pub struct MainContext {

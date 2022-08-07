@@ -18,9 +18,12 @@
  * along with tg_backup.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+extern crate core;
+
 mod actions;
 mod attachment_type;
 pub mod backup;
+pub mod companion;
 mod context;
 mod ext;
 mod in_progress;

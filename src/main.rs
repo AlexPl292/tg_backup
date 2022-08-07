@@ -25,5 +25,6 @@ use tg_backup::opts::Opts;
 async fn main() {
     let opts: Opts = Opts::parse();
 
-    tg_backup::backup::start_backup(opts).await;
+    let long_messages_results = tg_backup::companion::ask(&opts).await;
+    tg_backup::backup::start_backup(opts, long_messages_results).await;
 }

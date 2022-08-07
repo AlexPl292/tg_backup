@@ -31,6 +31,9 @@ grammers-mtsender = { git = "https://github.com/AlexPl292/grammers" }
 grammers-mtproto = { git = "https://github.com/AlexPl292/grammers" }
 async-trait = "0.1.48"
 regex = "1.5.4"
+teloxide = { version = "0.10.1", features = ["macros", "auto-send"] }
+pretty_env_logger = "0.4"
+futures = "0.3.21"
 
 [dev-dependencies]
 tempdir = "0.3.7"

@@ -33,6 +33,8 @@ use tokio::task;
 use tokio::time::Duration;
 
 use crate::actions::Action;
+use crate::companion::ChannelState::{ASK, BACKUP};
+use crate::companion::ChannelsStateInfo;
 use crate::context::{ChatContext, MainContext, MainMutContext, FILE, PHOTO, ROUND, VOICE};
 use crate::ext::{ChatExt, MessageExt};
 use crate::in_progress::{InProgress, InProgressInfo};
@@ -49,6 +51,7 @@ use grammers_mtproto::mtp::RpcError;
 use grammers_mtsender::{AuthorizationError, InvocationError};
 use grammers_session::Session;
 use grammers_tl_types as tl;
+use log::info;
 use serde_json::Error;
 use std::collections::HashSet;
 use sysinfo::{AsU32, Pid, System, SystemExt};
@@ -57,7 +60,7 @@ const PATH: &'static str = "backup";
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 const DEFAULT_FILE_NAME: &'static str = "tg_backup.session";
 
-pub async fn start_backup(opts: Opts) {
+pub async fn start_backup(opts: Opts, long_messages_results: Vec<ChannelsStateInfo>) {
     // Start auth subcommand
     if let Some(auth_command) = opts.auth {
         let SubCommand::Auth(auth_data) = auth_command;
@@ -114,6 +117,7 @@ pub async fn start_backup(opts: Opts) {
         already_finished: vec![],
         amount_of_dialogs: None,
         total_flood_wait: 0,
+        long_messages_info: long_messages_results,
     }));
 
     // Save me
@@ -142,6 +146,14 @@ pub async fn start_backup(opts: Opts) {
     }
 
     delete_lock_file(output_dir.as_path());
+
+    let output_dir = path_or_default_output(&opts.output);
+    let path_string = format!("{}/long_messages_result.json", output_dir.display());
+    let path = Path::new(path_string.as_str());
+    let file = File::create(path).unwrap();
+    if let Ok(ctx) = main_mut_context.clone().read() {
+        serde_json::to_writer_pretty(&file, &ctx.long_messages_info).unwrap();
+    }
 }
 
 fn need_auth(session_file: &Option<String>) -> bool {
@@ -238,7 +250,7 @@ fn path_or_default(session_file: &Option<String>) -> Result<PathBuf, ()> {
     }
 }
 
-fn path_or_default_output(folder: &Option<String>) -> PathBuf {
+pub fn path_or_default_output(folder: &Option<String>) -> PathBuf {
     if let Some(path) = folder {
         let mut path_buf = PathBuf::new();
         path_buf.push(shellexpand::tilde(path).into_owned());
@@ -415,6 +427,16 @@ async fn save_me(client: &mut Client, main_context: &MainContext) {
     }
 }
 
+pub async fn get_me(opts: &Opts) -> Option<Member> {
+    let output_dir = path_or_default_output(&opts.output);
+    let path_string = format!("{}/me.json", output_dir.display());
+    let path = Path::new(path_string.as_str());
+    return File::open(&path)
+        .map(|it| BufReader::new(it))
+        .ok()
+        .and_then(|it| serde_json::from_reader::<BufReader<File>, Member>(it).ok());
+}
+
 async fn start_iteration(
     client: Client,
     main_ctx: Arc<MainContext>,
@@ -540,14 +562,50 @@ async fn extract_dialog(
         return Ok(());
     }
 
-    if main_ctx.max_participants >= 0 && chat.participants_count() > main_ctx.max_participants {
-        log::info!(
-            "Skip chat. name: {} id: {} because it has more than {} participants",
+    if let Ok(ctx) = main_mut_ctx.read() {
+        let item = ctx
+            .long_messages_info
+            .iter()
+            .filter(|item| item.rec == chat_id)
+            .next();
+        if let Some(item) = item {
+            if item.state != BACKUP {
+                log::info!(
+                    "Skip chat. name: {} id: {} because it has more than {} participants",
+                    chat_name,
+                    chat_id,
+                    main_ctx.max_participants
+                );
+                return Ok(());
+            }
+        }
+    }
+    let chat_participants = chat.members(&client).await.iter().count() as i32;
+    if main_ctx.max_participants >= 0 && chat_participants > main_ctx.max_participants {
+        if let Ok(mut ctx) = main_mut_ctx.write() {
+            let item = ctx
+                .long_messages_info
+                .iter()
+                .filter(|item| item.rec == chat_id)
+                .next();
+            match item {
+                Some(_) => {}
+                None => {
+                    ctx.long_messages_info.push(ChannelsStateInfo {
+                        rec: chat_id,
+                        name: chat_name.to_string(),
+                        state: ASK,
+                    });
+                    info!(
+            "Skip chat. name: {} id: {} because it has more than {} participants. Asked for permission to save",
             chat_name,
             chat_id,
             main_ctx.max_participants
         );
-        return Ok(());
+                    return Ok(());
+                }
+            }
+        }
     }
 
     let visual_id = chat.visual_id();
